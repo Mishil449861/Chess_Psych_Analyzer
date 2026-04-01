@@ -14,6 +14,7 @@ def get_piece_name(san_move):
 def generate_explanation(log):
     san_move = log.get('move', 'Unknown')
     piece_name = get_piece_name(san_move)
+    cpu_color = log.get('cpu_color', 'Unknown')
     
     eval_score = log.get('absolute_eval', 0) / 100.0
     advantage = f"White by {abs(eval_score)} pawns" if eval_score > 0 else f"Black by {abs(eval_score)} pawns" if eval_score < 0 else "Dead even"
@@ -23,11 +24,13 @@ def generate_explanation(log):
     CRITICAL RULES:
     1. NEVER use filler phrases. Start immediately with the analysis.
     2. EXACTLY TWO SENTENCES.
-    3. NO MELODRAMA. Do not use words like "fear", "desperation", "panic", or "furious". Use professional chess terminology like "prophylaxis", "tension", "positional discomfort", "over-extended", "practical chances", or "solidifying".
-    4. Sentence 1: Analyze their mindset based on the momentum shift. Are they feeling positional pressure, confidently following opening preparation, or reacting to a complication?
-    5. Sentence 2: Explain their concrete board intention using the "Tactical Nature" data and what it means for the position.
+    3. NO MELODRAMA. Use professional chess terminology like "prophylaxis", "tension", "positional discomfort", "over-extended", "practical chances", or "solidifying".
+    4. PERSPECTIVE LOCK: The opponent you are analyzing is playing the {cpu_color.upper()} pieces. You MUST write strictly about how this move benefits {cpu_color}. Do NOT analyze this from the opposing player's perspective.
+    5. Sentence 1: Analyze {cpu_color}'s mindset based on the momentum shift. Are they feeling positional pressure, confidently following opening preparation, or reacting to a complication?
+    6. Sentence 2: Explain {cpu_color}'s concrete board intention using the "Tactical Nature" data and what it means for their position.
 
     HARD DATA TO ANALYZE:
+    Opposing Player's Color: {cpu_color}
     Game Phase: {log.get('phase', 'Unknown')}
     Current Absolute Advantage: {advantage}
     Piece Moved: {piece_name} (Notation: {san_move})

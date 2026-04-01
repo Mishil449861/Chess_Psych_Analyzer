@@ -291,6 +291,9 @@ with col1:
                             if is_castling: tactics.append("Defensive Castling/Securing King")
                             if not tactics: tactics.append("Positional Maneuvering/Developing")
                             
+                            # Determine the CPU's color
+                            cpu_color = "Black" if st.session_state.player_color == "White" else "White"
+                            
                             log = {
                                 "move": san_move,
                                 "tag": tag,
@@ -299,6 +302,7 @@ with col1:
                                 "phase": phase,
                                 "tactics": ", ".join(tactics), 
                                 "absolute_eval": new_eval,     
+                                "cpu_color": cpu_color,  # <--- NEW: Give the AI the color!
                                 "explanation": ""
                             }
                             
