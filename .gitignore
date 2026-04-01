@@ -1,0 +1,6 @@
+/.venv
+*.gguf
+/venv
+/__pycache__
+/stockfish
+/ChessEngine

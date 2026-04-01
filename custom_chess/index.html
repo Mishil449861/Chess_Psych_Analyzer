@@ -1,0 +1,58 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <style> body { margin: 0; padding: 0; background-color: transparent; } </style>
+</head>
+<body>
+    <div id="myBoard" style="width: 500px;"></div>
+    <script>
+        let board = null;
+        let game = null;
+
+        function sendToStreamlit(type, data) {
+            window.parent.postMessage({ isStreamlitMessage: true, type: type, ...data }, "*");
+        }
+
+        function setHeight() { sendToStreamlit("streamlit:setFrameHeight", {height: 550}); }
+
+        window.addEventListener("message", function(event) {
+            if (event.data.type === "streamlit:render") {
+                let fen = event.data.args.fen;
+                
+                if (board === null) {
+                    game = new Chess(fen);
+                    board = Chessboard('myBoard', {
+                        draggable: true,
+                        position: fen,
+                        orientation: 'white',
+                        pieceTheme: 'https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@1.0.0/website/img/chesspieces/wikipedia/{piece}.png',
+                        onDragStart: function(source, piece) {
+                            if (game.game_over()) return false;
+                            let playerColor = 'white';
+                            if (playerColor === 'white' && piece.search(/^b/) !== -1) return false;
+                            if (playerColor === 'black' && piece.search(/^w/) !== -1) return false;
+                        },
+                        onDrop: function(source, target) {
+                            let move = game.move({from: source, to: target, promotion: 'q'});
+                            if (move === null) return 'snapback';
+                            sendToStreamlit("streamlit:setComponentValue", {value: source + target + "-" + Date.now()});
+                        },
+                        onSnapEnd: function() { board.position(game.fen()); }
+                    });
+                    setHeight();
+                } else {
+                    game.load(fen);
+                    board.position(fen);
+                }
+            }
+        });
+        sendToStreamlit("streamlit:componentReady", {apiVersion: 1});
+        setHeight();
+    </script>
+</body>
+</html>
