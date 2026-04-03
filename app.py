@@ -4,141 +4,170 @@ import streamlit as st
 st.set_page_config(layout="wide", page_title="Chess Psych")
 
 # =======================
-# 1. CUSTOM CSS (The "Beautiful UI" Upgrade)
+# CLEAN LIGHT UI
 # =======================
 st.markdown("""
 <style>
-    /* Hide top header and footer for a cleaner app feel */
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* Sleek Digital Chess Clocks */
-    .chess-clock {
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 1.8rem;
-        font-weight: 900;
-        background-color: #1E1E1E;
-        color: #00FFAA;
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        border: 2px solid #333;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        margin-bottom: 20px;
-    }
-    .clock-title {
-        font-size: 0.9rem;
-        color: #AAAAAA;
-        font-family: sans-serif;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 5px;
-    }
+header {visibility: hidden;}
+footer {visibility: hidden;}
 
-    /* Psychological Threat Cards */
-    .insight-card {
-        background-color: #1a1c23;
-        border-left: 5px solid #FF4B4B;
-        padding: 15px 20px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        transition: transform 0.2s ease-in-out;
-    }
-    .insight-card:hover {
-        transform: translateX(5px);
-    }
-    .insight-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #333;
-        padding-bottom: 8px;
-        margin-bottom: 10px;
-    }
-    .insight-move { 
-        font-weight: 800; 
-        color: #FFFFFF; 
-        font-size: 1.2em; 
-    }
-    .insight-tag { 
-        font-size: 0.85em; 
-        color: #FF4B4B; 
-        background: rgba(255, 75, 75, 0.1);
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .insight-text { 
-        font-size: 1.05em; 
-        line-height: 1.5; 
-        color: #D3D3D3; 
-    }
-    
-    /* Eval Bar Styling */
-    .stProgress > div > div > div > div {
-        background-color: #00FFAA;
-    }
+.stApp {
+    background-color: #F7F8FA;
+    color: #1F2937;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.block-container { padding: 1.5rem 3rem; }
+
+h1 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #111827;
+}
+
+.glass-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    margin-bottom: 16px;
+}
+
+.clock {
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 12px;
+    border-radius: 10px;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+}
+
+.clock-label {
+    font-size: 0.75rem;
+    color: #6B7280;
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+section[data-testid="stSidebar"] {
+    background: #FFFFFF;
+    border-right: 1px solid #E5E7EB;
+}
+
+.stButton button {
+    background: #2563EB;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    border: none;
+}
+.stButton button:hover { background: #1D4ED8; }
+
+.insight-card {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.insight-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.insight-move { font-weight: 600; }
+
+.insight-tag {
+    font-size: 0.7rem;
+    background: #EEF2FF;
+    color: #3730A3;
+    padding: 3px 6px;
+    border-radius: 6px;
+}
+
+.insight-text { font-size: 0.9rem; color: #374151; }
+
+.game-over-banner {
+    background: #FEF2F2;
+    border: 1px solid #FECACA;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #991B1B;
+    margin-bottom: 16px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# 2. All other imports
+# =======================
+# IMPORTS
+# =======================
 import streamlit.components.v1 as components
 import chess
 import time
 import os
-from engine import evaluate, get_engine_move
+from engine import analyze_and_respond, quick_evaluate
 from psychology import detect_psychology
-from llm_async import generate_explanation
+from llm import generate_explanation
 
 # =======================
-# 3. INIT STATE
+# SESSION STATE
 # =======================
-if "fen" not in st.session_state: st.session_state.fen = chess.STARTING_FEN
-if "logs" not in st.session_state: st.session_state.logs = []
-if "eval" not in st.session_state: st.session_state.eval = 0
-if "user_time" not in st.session_state: st.session_state.user_time = 300 
-if "cpu_time" not in st.session_state: st.session_state.cpu_time = 300
-if "last_timestamp" not in st.session_state: st.session_state.last_timestamp = time.time()
-if "last_msg" not in st.session_state: st.session_state.last_msg = ""
-if "player_color" not in st.session_state: st.session_state.player_color = "White"
-if "game_started" not in st.session_state: st.session_state.game_started = False
+def _reset_game(time_seconds: int, color: str):
+    st.session_state.fen          = chess.STARTING_FEN
+    st.session_state.logs         = []
+    st.session_state.user_time    = time_seconds
+    st.session_state.cpu_time     = time_seconds
+    st.session_state.player_color = color
+    st.session_state.last_msg     = ""
+    st.session_state.prev_deltas  = []
+    st.session_state.move_number  = 0
+    st.session_state.last_eval    = 0          # centipawns, White's POV, seeded at start
+    st.session_state.last_move_ts = None       # timestamp of last move
+    st.session_state.game_over    = False
+    st.session_state.game_result  = ""
 
-# Helper function for clock formatting
+for key, default in [
+    ("fen",          chess.STARTING_FEN),
+    ("logs",         []),
+    ("user_time",    300),
+    ("cpu_time",     300),
+    ("player_color", "White"),
+    ("last_msg",     ""),
+    ("prev_deltas",  []),
+    ("move_number",  0),
+    ("last_eval",    0),
+    ("last_move_ts", None),
+    ("game_over",    False),
+    ("game_result",  ""),
+]:
+    if key not in st.session_state:
+        st.session_state[key] = default
+
 def format_time(seconds):
     return f"{int(seconds // 60):02d}:{int(seconds % 60):02d}"
 
 # =======================
-# 4. SIDEBAR & SETTINGS
+# SIDEBAR
 # =======================
 with st.sidebar:
     st.title("Match Setup")
-    st.markdown("---")
-    
     time_control = st.radio("Game Duration", ["1 Min", "3 Min", "5 Min"], index=2)
-    time_map = {"1 Min": 60, "3 Min": 180, "5 Min": 300}
-    
+    time_map     = {"1 Min": 60, "3 Min": 180, "5 Min": 300}
     color_choice = st.radio("Play as", ["White", "Black"])
-    difficulty = st.select_slider("CPU Difficulty", options=["Easy", "Medium", "Hard", "GM"], value="Medium")
-    depth_map = {"Easy": 1, "Medium": 5, "Hard": 12, "GM": 20}
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("Start New Game", use_container_width=True, type="primary"):
-        st.session_state.fen = chess.STARTING_FEN
-        st.session_state.logs = []
-        st.session_state.eval = 0
-        st.session_state.user_time = time_map[time_control]
-        st.session_state.cpu_time = time_map[time_control]
-        st.session_state.last_timestamp = time.time()
-        st.session_state.last_msg = ""
-        st.session_state.player_color = color_choice
-        st.session_state.game_started = False 
+
+    if st.button("Start New Game", use_container_width=True):
+        _reset_game(time_map[time_control], color_choice)
         st.rerun()
 
 # =======================
-# 5. AUTO-BUILD COMPONENT
+# CHESS BOARD COMPONENT
 # =======================
 COMPONENT_DIR = "custom_chess"
 os.makedirs(COMPONENT_DIR, exist_ok=True)
@@ -147,200 +176,195 @@ html_code = f"""
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <style> body {{ margin: 0; padding: 0; background-color: transparent; }} </style>
+<link rel="stylesheet"
+  href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 </head>
-<body>
-    <div id="myBoard" style="width: 500px;"></div>
-    <script>
-        let board = null;
-        let game = null;
+<body style="margin:0;padding:0;overflow:hidden;">
+<div id="board" style="width:450px;margin:5px;"></div>
+<script>
+let board = null;
+let game  = null;
 
-        function sendToStreamlit(type, data) {{
-            window.parent.postMessage({{ isStreamlitMessage: true, type: type, ...data }}, "*");
-        }}
+function send(msg) {{
+    window.parent.postMessage({{ isStreamlitMessage: true, ...msg }}, "*");
+}}
 
-        function setHeight() {{ sendToStreamlit("streamlit:setFrameHeight", {{height: 550}}); }}
-
-        window.addEventListener("message", function(event) {{
-            if (event.data.type === "streamlit:render") {{
-                let fen = event.data.args.fen;
-                
-                if (board === null) {{
-                    game = new Chess(fen);
-                    board = Chessboard('myBoard', {{
-                        draggable: true,
-                        position: fen,
-                        orientation: '{st.session_state.player_color.lower()}',
-                        pieceTheme: 'https://cdn.jsdelivr.net/gh/oakmac/chessboardjs@1.0.0/website/img/chesspieces/wikipedia/{{piece}}.png',
-                        onDragStart: function(source, piece) {{
-                            if (game.game_over()) return false;
-                            let playerColor = '{st.session_state.player_color.lower()}';
-                            if (playerColor === 'white' && piece.search(/^b/) !== -1) return false;
-                            if (playerColor === 'black' && piece.search(/^w/) !== -1) return false;
-                        }},
-                        onDrop: function(source, target) {{
-                            let move = game.move({{from: source, to: target, promotion: 'q'}});
-                            if (move === null) return 'snapback';
-                            sendToStreamlit("streamlit:setComponentValue", {{value: source + target + "-" + Date.now()}});
-                        }},
-                        onSnapEnd: function() {{ board.position(game.fen()); }}
-                    }});
-                    setHeight();
-                }} else {{
-                    game.load(fen);
-                    board.position(fen);
+window.addEventListener("message", function(e) {{
+    if (e.data.type === "streamlit:render") {{
+        let fen = e.data.args.fen;
+        if (!board) {{
+            game = new Chess(fen);
+            board = Chessboard('board', {{
+                draggable: true,
+                position: fen,
+                orientation: '{st.session_state.player_color.lower()}',
+                pieceTheme: function(piece) {{
+                    return 'https://chessboardjs.com/img/chesspieces/wikipedia/' + piece + '.png';
+                }},
+                onDrop: function(s, t) {{
+                    let move = game.move({{from: s, to: t, promotion: 'q'}});
+                    if (!move) return 'snapback';
+                    send({{ type: "streamlit:setComponentValue", value: s + t }});
                 }}
-            }}
-        }});
-        sendToStreamlit("streamlit:componentReady", {{apiVersion: 1}});
-        setHeight();
-    </script>
+            }});
+            send({{ type: "streamlit:setFrameHeight", height: 480 }});
+        }} else {{
+            game.load(fen);
+            board.position(fen);
+        }}
+    }}
+}});
+
+send({{ type: "streamlit:componentReady", apiVersion: 1 }});
+</script>
 </body>
 </html>
 """
-with open(os.path.join(COMPONENT_DIR, "index.html"), "w") as f:
+
+with open(os.path.join(COMPONENT_DIR, "index.html"), "w", encoding="utf-8") as f:
     f.write(html_code)
 
-st_chess_board = components.declare_component("st_chess_board", path=COMPONENT_DIR)
+st_board = components.declare_component("board", path=COMPONENT_DIR)
 
 # =======================
-# 6. ENGINE AUTO-MOVE (If Black)
+# MAIN LAYOUT
 # =======================
-board = chess.Board(st.session_state.fen)
-if not st.session_state.game_started and st.session_state.player_color == "Black" and board.turn == chess.WHITE:
-    with st.spinner("Computer is opening..."):
-        engine_move = get_engine_move(board, depth=depth_map[difficulty])
-        board.push(engine_move)
-        st.session_state.fen = board.fen()
-        st.session_state.eval = evaluate(board)
-        st.rerun()
-
-# =======================
-# 7. MAIN LAYOUT
-# =======================
-st.title("Chess Psych Analyzer")
-
-col1, col2 = st.columns([1.2, 1], gap="large")
+st.title("Chess Psych")
+col1, col2 = st.columns([1.3, 1])
 
 with col1:
-    # Beautiful Digital Clocks
-    c_cpu, c_user = st.columns(2)
-    c_cpu.markdown(f'<div class="chess-clock"><div class="clock-title">CPU</div>{format_time(st.session_state.cpu_time)}</div>', unsafe_allow_html=True)
-    c_user.markdown(f'<div class="chess-clock"><div class="clock-title">YOU ({st.session_state.player_color})</div>{format_time(st.session_state.user_time)}</div>', unsafe_allow_html=True)
-    
-    if not st.session_state.game_started:
-        st.info("Clocks will start when you make your first move.")
-        
-    user_move_payload = st_chess_board(fen=st.session_state.fen, key="main_board")
+    c1, c2 = st.columns(2)
+    c1.markdown(f"""
+    <div class="glass-card">
+        <div class="clock-label">CPU</div>
+        <div class="clock">{format_time(st.session_state.cpu_time)}</div>
+    </div>""", unsafe_allow_html=True)
+    c2.markdown(f"""
+    <div class="glass-card">
+        <div class="clock-label">YOU</div>
+        <div class="clock">{format_time(st.session_state.user_time)}</div>
+    </div>""", unsafe_allow_html=True)
 
-    if user_move_payload and user_move_payload != st.session_state.last_msg:
-        st.session_state.last_msg = user_move_payload
-        move_uci = str(user_move_payload).split('-')[0]
-        
-        try:
-            move = chess.Move.from_uci(move_uci)
-            if move in board.legal_moves:
-                if not st.session_state.game_started:
-                    st.session_state.game_started = True
-                    st.session_state.last_timestamp = time.time()
-                else:
-                    now = time.time()
-                    st.session_state.user_time -= (now - st.session_state.last_timestamp)
-                
-                board.push(move)
-                st.session_state.eval = evaluate(board)
-                
-                if not board.is_game_over() and st.session_state.user_time > 0:
-                    with st.spinner("CPU is calculating..."):
-                        cpu_start = time.time()
-                        eval_before_cpu = st.session_state.eval
-                        
-                        engine_move = get_engine_move(board, depth=depth_map[difficulty])
-                        
-                        if engine_move:
-                            is_capture = board.is_capture(engine_move)
-                            is_castling = board.is_castling(engine_move)
-                            
-                            san_move = board.san(engine_move) 
-                            board.push(engine_move)
-                            
-                            is_check = board.is_check()
-                            cpu_elapsed = time.time() - cpu_start
-                            st.session_state.cpu_time -= cpu_elapsed
-                            
-                            new_eval = evaluate(board)
-                            st.session_state.eval = new_eval
-                            
-                            if st.session_state.player_color == "White": 
-                                cpu_delta = eval_before_cpu - new_eval 
-                            else: 
-                                cpu_delta = new_eval - eval_before_cpu
+    st.caption("Clocks start on first move")
 
-                            prev_deltas = [l.get('delta', 0) for l in st.session_state.logs]
-                            move_number = len(board.move_stack)
-                            tag = detect_psychology(cpu_delta, prev_deltas, cpu_elapsed, move_number)
-                            phase = "Opening" if move_number < 10 else "Middlegame" if move_number < 30 else "Endgame"
-                            
-                            tactics = []
-                            if is_capture: tactics.append("Capture/Trading material")
-                            if is_check: tactics.append("Attacking the King (Check)")
-                            if is_castling: tactics.append("Defensive Castling/Securing King")
-                            if not tactics: tactics.append("Positional Maneuvering/Developing")
-                            
-                            # Determine the CPU's color
-                            cpu_color = "Black" if st.session_state.player_color == "White" else "White"
-                            
-                            log = {
-                                "move": san_move,
-                                "tag": tag,
-                                "delta": cpu_delta,
-                                "duration": round(cpu_elapsed, 2),
-                                "phase": phase,
-                                "tactics": ", ".join(tactics), 
-                                "absolute_eval": new_eval,     
-                                "cpu_color": cpu_color,  # <--- NEW: Give the AI the color!
-                                "explanation": ""
-                            }
-                            
-                            log["explanation"] = generate_explanation(log)
-                            st.session_state.logs.append(log)
-
-                st.session_state.fen = board.fen()
-                st.session_state.last_timestamp = time.time()
-                st.rerun()
-        except ValueError:
-            st.error("Invalid move!")
-
-with col2:
-    st.markdown("### Engine Evaluation")
-    eval_score = st.session_state.eval if st.session_state.player_color == "White" else -st.session_state.eval
-    st.progress(max(min((eval_score + 10) / 20, 1.0), 0.0))
-    st.caption("Left = Black Advantage | Right = White Advantage")
-    
-    st.markdown("### Threat Profiles", unsafe_allow_html=True)
-    
-    if st.session_state.user_time <= 0:
-        st.error("Game Over: You lost on time!")
-    elif st.session_state.cpu_time <= 0:
-        st.success("Game Over: CPU lost on time!")
-
-    # Render sleek HTML cards instead of clunky expanders
-    if not st.session_state.logs:
-        st.info("Make a move to generate the first psychological profile.")
-    
-    for log in reversed(st.session_state.logs[-4:]): # Show last 4 profiles
+    # Game-over banner
+    if st.session_state.game_over:
         st.markdown(f"""
-        <div class="insight-card">
-            <div class="insight-header">
-                <div class="insight-move">{log['move']}</div>
-                <div class="insight-tag">{log['tag']}</div>
-            </div>
-            <div class="insight-text">
-                {log['explanation']}
-            </div>
-        </div>
+        <div class="game-over-banner">{st.session_state.game_result}</div>
         """, unsafe_allow_html=True)
+
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    move = st_board(fen=st.session_state.fen, key="board")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# =======================
+# MOVE PROCESSING
+# =======================
+if move and move != st.session_state.last_msg and not st.session_state.game_over:
+    st.session_state.last_msg = move
+
+    try:
+        board = chess.Board(st.session_state.fen)
+        mv    = chess.Move.from_uci(move)
+
+        if mv not in board.legal_moves:
+            st.warning("Illegal move received — try again.")
+        else:
+            # --- Timing ---
+            now = time.time()
+            move_time = (now - st.session_state.last_move_ts) if st.session_state.last_move_ts else 0.0
+            st.session_state.last_move_ts = now
+
+            # --- Push user's move ---
+            board.push(mv)
+            st.session_state.move_number += 1
+
+            # --- Check for game over after user's move ---
+            if board.is_game_over():
+                st.session_state.fen       = board.fen()
+                st.session_state.game_over = True
+                outcome = board.outcome()
+                if outcome and outcome.winner is not None:
+                    winner = "White" if outcome.winner else "Black"
+                    st.session_state.game_result = f"Game Over — {winner} wins!"
+                else:
+                    st.session_state.game_result = "Game Over — Draw!"
+                st.rerun()
+
+            # --- Engine reply + evaluation in ONE Stockfish session ---
+            engine_move, eval_mid, eval_final = analyze_and_respond(board, depth=5, skill_level=10)
+
+            if engine_move:
+                move_san = board.san(engine_move)
+                board.push(engine_move)
+
+                # delta = net centipawn change this full turn (White's POV)
+                delta = eval_final - st.session_state.last_eval
+                st.session_state.last_eval = eval_final
+
+                # --- Psychology detection (actually called now) ---
+                tag, phase = detect_psychology(
+                    delta        = delta,
+                    prev_deltas  = st.session_state.prev_deltas,
+                    move_time    = move_time,
+                    move_number  = st.session_state.move_number,
+                )
+                st.session_state.prev_deltas.append(delta)
+
+                # --- Build complete log entry (all fields populated) ---
+                cpu_color = "Black" if st.session_state.player_color == "White" else "White"
+                log_data  = {
+                    "move":          move_san,
+                    "tag":           tag,
+                    "phase":         phase,
+                    "tactics":       tag,          # psychology tag doubles as tactics label
+                    "delta":         delta,
+                    "absolute_eval": eval_final,   # centipawns, White's POV
+                    "cpu_color":     cpu_color,
+                }
+
+                # LLM explanation (all fields now exist)
+                log_data["explanation"] = generate_explanation(log_data)
+                st.session_state.logs.append(log_data)
+
+                # --- Check game over after engine's move ---
+                if board.is_game_over():
+                    st.session_state.game_over = True
+                    outcome = board.outcome()
+                    if outcome and outcome.winner is not None:
+                        winner = "White" if outcome.winner else "Black"
+                        st.session_state.game_result = f"Game Over — {winner} wins!"
+                    else:
+                        st.session_state.game_result = "Game Over — Draw!"
+
+            st.session_state.fen = board.fen()
+            st.rerun()
+
+    except Exception as e:
+        st.error(f"Error processing move: {e}")
+
+# =======================
+# THREAT PROFILES PANEL
+# =======================
+with col2:
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.markdown("### Threat Profiles")
+
+    if not st.session_state.logs:
+        st.caption("No analysis yet — make your first move.")
+    else:
+        for log in reversed(st.session_state.logs[-4:]):
+            st.markdown(f"""
+            <div class="insight-card">
+                <div class="insight-header">
+                    <div class="insight-move">{log['move']}</div>
+                    <div class="insight-tag">{log['tag']}</div>
+                </div>
+                <div class="insight-text">{log.get('explanation', '')}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
