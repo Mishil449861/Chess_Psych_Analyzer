@@ -139,28 +139,27 @@ if st.session_state.game_over:
     """, unsafe_allow_html=True)
 
 # --- MOVE PROCESSING & PHASE 3 COACHING ---
+# --- MOVE PROCESSING (Place this BEFORE st_board() call) ---
 if move and move != st.session_state.last_msg and not st.session_state.game_over:
     st.session_state.last_msg = move
     board = chess.Board(st.session_state.fen)
     mv = chess.Move.from_uci(move)
 
     if mv in board.legal_moves:
-        piece_moved = board.piece_at(mv.from_square).symbol().upper() if board.piece_at(mv.from_square) else 'P'
-        board.push(mv)
+        board.push(mv) # User Move
         
-        # Check user blunder for live coaching
-        eval_after_user = st.session_state.chess_engine.evaluate_position(board)
-        delta = eval_after_user - st.session_state.last_eval
+        # Immediate Engine Reply
+        result = st.session_state.chess_engine.engine.play(board, chess.engine.Limit(time=0.1))
+        board.push(result.move) # Engine Move
         
-        if delta < -100: 
-            for insight in st.session_state.profile["insights"]:
-                if insight["piece"] == piece_moved:
-                    st.toast(f"🚨 COACH ALERT: That {piece_moved} move matches your historical blindspot! {insight['text']}", icon="⚠️")
+        # Update state once for both moves
+        st.session_state.fen = board.fen()
+        st.session_state.last_eval = st.session_state.chess_engine.evaluate_position(board)
         
         if board.is_game_over():
-            st.session_state.fen = board.fen()
             st.session_state.game_over = True
-            st.rerun()
+        
+        st.rerun() # Refresh UI with both moves completed
 
         # Engine replies
         result = st.session_state.chess_engine.engine.play(board, chess.engine.Limit(time=0.1))
