@@ -1,3 +1,13 @@
+import os
+import subprocess
+
+# Replace 'stockfish_linux_x86_64' with your actual filename
+STOCKFISH_PATH = os.path.join(os.getcwd(), "stockfish") 
+
+# Force execute permissions
+if os.path.exists(STOCKFISH_PATH):
+    os.chmod(STOCKFISH_PATH, 0o755)
+
 import streamlit as st
 import streamlit.components.v1 as components
 import chess
@@ -97,16 +107,26 @@ with col1:
 
 with col2:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.markdown("### 🎙️ Live Coach Commentary")
+    
+    # Check if the last move was a blunder and show it here
+    if st.session_state.last_eval < -100: # Adjust this threshold
+        st.error("⚠️ Careful! The engine thinks that was a significant slip.")
+    else:
+        st.success("✅ Solid move. You're maintaining the tension.")
+    
+    st.divider()
     st.markdown("### Known Threat Profiles")
-    for insight in st.session_state.profile["insights"]:
-        st.markdown(f"""
-        <div class="insight-card">
-            <b>Target Piece: {insight['piece']}</b><br>
-            <span class="insight-text">{insight['text']}</span>
-        </div>
-        """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # ... your existing loop for insights ...
 
+# --- ADD THIS DIAGNOSTIC BLOCK HERE ---
+if move:
+    st.sidebar.write(f"DEBUG: Move Received: {move}")
+    st.sidebar.write(f"DEBUG: Session FEN: {st.session_state.fen}")
+    st.sidebar.write(f"DEBUG: Is Game Over? {st.session_state.game_over}")
+# --------------------------------------
+
+col1, col2 = st.columns([1.3, 1])
 # --- PHASE 4: END GAME PERSONA CARD ---
 if st.session_state.game_over:
     st.markdown(f"""
