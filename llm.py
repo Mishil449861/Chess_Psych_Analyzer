@@ -39,14 +39,18 @@ def generate_explanation(log: dict) -> str:
 
     prompt = f"""Act as a professional chess psychologist and behavioral profiler.
 
-CRITICAL RULES:
-1. Start immediately with the analysis — no introductions, no filler.
-2. EXACTLY TWO SENTENCES. No more, no less.
-3. Use clinical language only: "prophylaxis", "tension", "positional discomfort", "over-extended", "practical chances".
-4. Analyze strictly from the {cpu_color.upper()} side's perspective.
+IMPORTANT RULES:
+1. Start immediately — no introductions.
+2. Use exactly TWO sentences.
+3. Keep language simple and easy to understand.
+4. Do NOT sound clinical or robotic.
+5. Do NOT predict exact moves. Instead, describe ideas or plans the opponent may be aiming for.
+6. Focus on what the opponent is likely trying to achieve next (plans, threats, or strategy).
+7. Write from the perspective of explaining the opponent's thinking in plain language.
+8. Analyze strictly from the {cpu_color.upper()} side's perspective.
 
-Sentence 1 (The Mask): Based on the momentum shift and move quality, evaluate the opponent's composure and risk-tolerance right now.
-Sentence 2 (The Intent): Explain the concrete strategic goal of this {piece} move ({san}) and what {cpu_color} is preparing next.
+Sentence 1 (The Mask): Explain how the opponent likely feels about the position and what is influencing their decisions right now.
+Sentence 2 (The Intent): Explain what kind of movement they may be going for with this {piece} move ({san}) and what {cpu_color} is preparing next (for example: attacking the king, improving piece activity, simplifying, defending weaknesses).
 
 GAME DATA:
   Opponent color   : {cpu_color}
