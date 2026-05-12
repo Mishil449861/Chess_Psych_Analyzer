@@ -4,3 +4,7 @@
 /__pycache__
 /stockfish
 /ChessEngine
+*.bin
+*.safetensors
+custom_chess/
+chess_psych.db

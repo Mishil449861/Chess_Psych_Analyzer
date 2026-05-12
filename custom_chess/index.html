@@ -1,61 +1,31 @@
 
-<!DOCTYPE html>
-<html>
-<head>
+<!DOCTYPE html><html><head>
 <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-</head>
-<body style="margin: 0; padding: 0; overflow: hidden;">
-<div id="board" style="width: 450px; margin: 5px;"></div>
-
+</head><body style="margin:0;padding:0;overflow:hidden;">
+<div id="board" style="width:450px;margin:5px;"></div>
 <script>
-let board = null;
-let game = null;
-
-function send(msg) {
-    window.parent.postMessage({
-        isStreamlitMessage: true,
-        ...msg
-    }, "*");
-}
-
+let board = null; let game = null;
+function send(msg) { window.parent.postMessage({ isStreamlitMessage: true, ...msg }, "*"); }
 window.addEventListener("message", function(e) {
     if (e.data.type === "streamlit:render") {
         let fen = e.data.args.fen;
-
         if (!board) {
             game = new Chess(fen);
             board = Chessboard('board', {
-                draggable: true,
-                position: fen,
-                orientation: 'white',
-                // Use a function to ensure absolute URLs are used
-                pieceTheme: function(piece) {
-                    return 'https://chessboardjs.com/img/chesspieces/wikipedia/' + piece + '.png';
-                },
+                draggable: true, position: fen, orientation: 'white',
+                pieceTheme: function(piece) { return 'https://chessboardjs.com/img/chesspieces/wikipedia/' + piece + '.png'; },
                 onDrop: function(s, t) {
                     let move = game.move({from: s, to: t, promotion: 'q'});
                     if (!move) return 'snapback';
-                    send({
-                        type:"streamlit:setComponentValue",
-                        value: s+t
-                    });
+                    send({ type: "streamlit:setComponentValue", value: s + t });
                 }
             });
-            send({type: "streamlit:setFrameHeight", height: 480});
-        } else {
-            game.load(fen);
-            board.position(fen);
-        }
+            send({ type: "streamlit:setFrameHeight", height: 480 });
+        } else { game.load(fen); board.position(fen); }
     }
 });
-
-send({
-    type: "streamlit:componentReady",
-    apiVersion: 1
-});
-</script>
-</body>
-</html>
+send({ type: "streamlit:componentReady", apiVersion: 1 });
+</script></body></html>
