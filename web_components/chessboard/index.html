@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet"
+    href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <style>
+    body { margin: 0; padding: 0; background: transparent; }
+    #board { width: 480px; max-width: 100%; }
+  </style>
+</head>
+<body>
+  <div id="board"></div>
+<script>
+let board = null;
+let game = null;
+let lastPositionId = -1;
+let lastOrientation = null;
+
+function send(value) {
+  window.parent.postMessage({
+    isStreamlitMessage: true,
+    type: "streamlit:setComponentValue",
+    value: value,
+  }, "*");
+}
+
+function ready() {
+  window.parent.postMessage({
+    isStreamlitMessage: true,
+    type: "streamlit:componentReady",
+    apiVersion: 1,
+  }, "*");
+  window.parent.postMessage({
+    isStreamlitMessage: true,
+    type: "streamlit:setFrameHeight",
+    height: 500,
+  }, "*");
+}
+
+function build(fen, orientation) {
+  game = new Chess(fen);
+  board = Chessboard('board', {
+    draggable: true,
+    position: fen,
+    orientation: orientation,
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+    onDragStart: function(source, piece) {
+      if (game.game_over()) return false;
+      // Don't allow dragging the opponent's pieces
+      if ((orientation === 'white' && piece.search(/^b/) !== -1) ||
+          (orientation === 'black' && piece.search(/^w/) !== -1)) {
+        return false;
+      }
+    },
+    onDrop: function(source, target) {
+      const move = game.move({from: source, to: target, promotion: 'q'});
+      if (move === null) return 'snapback';
+      send({move: source + target + (move.promotion || ''), ts: Date.now()});
+    },
+  });
+}
+
+window.addEventListener("message", function(e) {
+  if (e.data.type !== "streamlit:render") return;
+  const args = e.data.args;
+  const fen = args.fen;
+  const orientation = args.orientation;
+  const positionId = args.position_id;
+
+  if (board === null || orientation !== lastOrientation) {
+    lastOrientation = orientation;
+    if (board !== null) board.destroy();
+    build(fen, orientation);
+  } else if (positionId !== lastPositionId) {
+    game.load(fen);
+    board.position(fen);
+  }
+  lastPositionId = positionId;
+});
+
+ready();
+</script>
+</body>
+</html>

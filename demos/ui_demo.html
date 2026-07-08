@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chess Psych UI Demo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #647084;
+      --paper: #faf8f3;
+      --panel: #ffffff;
+      --line: #ded8ce;
+      --blue: #1f5fbf;
+      --red: #c5352d;
+      --green: #16825d;
+      --gold: #b87a12;
+      --dark: #263241;
+      --square-light: #ecd9bd;
+      --square-dark: #8a6845;
+      --shadow: 0 18px 44px rgba(25, 31, 44, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 16px 28px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #202938;
+      background: #202938;
+      color: #fff;
+      font-weight: 800;
+      border-radius: 6px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .subhead {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(22, 130, 93, 0.14);
+    }
+
+    main {
+      width: min(1380px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 22px 0 28px;
+      display: grid;
+      grid-template-columns: minmax(360px, 520px) 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .left {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      overflow: hidden;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #f3eee5;
+    }
+
+    .tab {
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: #ffffff;
+      border-color: #d5cabb;
+      color: var(--ink);
+    }
+
+    .case-title {
+      padding: 18px 18px 10px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 27px;
+      line-height: 1.06;
+      letter-spacing: 0;
+    }
+
+    .move-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .move {
+      color: var(--ink);
+      font-size: 38px;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .board-wrap {
+      padding: 12px 18px 18px;
+    }
+
+    .board {
+      width: min(100%, 470px);
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      border: 8px solid #3a2a1d;
+      margin: 0 auto;
+      background: #3a2a1d;
+    }
+
+    .square {
+      position: relative;
+      display: grid;
+      place-items: center;
+      font-family: "Times New Roman", serif;
+      font-size: clamp(25px, 6vw, 46px);
+      line-height: 1;
+      color: #181b22;
+      min-width: 0;
+      min-height: 0;
+    }
+
+    .square.light { background: var(--square-light); }
+    .square.dark { background: var(--square-dark); }
+    .square.target { box-shadow: inset 0 0 0 4px rgba(31, 95, 191, 0.86); }
+    .square.from { box-shadow: inset 0 0 0 4px rgba(197, 53, 45, 0.82); }
+
+    .coord {
+      position: absolute;
+      left: 4px;
+      bottom: 3px;
+      color: rgba(23, 32, 51, 0.58);
+      font: 700 10px "Segoe UI", Arial, sans-serif;
+    }
+
+    .right {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 14px;
+    }
+
+    .hero-strip {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 14px;
+    }
+
+    .read {
+      padding: 18px;
+      border-left: 5px solid var(--red);
+    }
+
+    .read.psych { border-left-color: var(--green); }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .read strong {
+      display: block;
+      margin-top: 7px;
+      font-size: 23px;
+      line-height: 1.12;
+    }
+
+    .read p {
+      margin: 10px 0 0;
+      color: #475165;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 15px;
+      min-height: 96px;
+      display: grid;
+      align-content: center;
+      gap: 5px;
+    }
+
+    .metric .num {
+      font-size: 34px;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .metric .cap {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .section {
+      padding: 17px;
+    }
+
+    .section h3 {
+      margin: 0 0 14px;
+      font-size: 17px;
+    }
+
+    .chart {
+      display: grid;
+      gap: 8px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 44px 1fr 70px;
+      gap: 10px;
+      align-items: center;
+      min-height: 23px;
+      font-size: 13px;
+    }
+
+    .track {
+      height: 12px;
+      background: #eee9df;
+      border-radius: 999px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar {
+      height: 100%;
+      background: var(--red);
+      border-radius: 999px;
+      width: 0;
+    }
+
+    .bar.good { background: var(--green); }
+
+    .delta {
+      color: #4d586b;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .script {
+      display: grid;
+      gap: 10px;
+    }
+
+    .cue {
+      border: 1px solid #e1dacd;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fffaf2;
+    }
+
+    .cue b {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .cue span {
+      color: #576274;
+      line-height: 1.38;
+      font-size: 14px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 13px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: #e9f1ff;
+      color: #16437e;
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .bottom-note {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 0 2px;
+    }
+
+    @media (max-width: 1050px) {
+      main, .workspace, .hero-strip { grid-template-columns: 1fr; }
+      .bottom-note { flex-direction: column; }
+    }
+
+    @media (max-width: 620px) {
+      header { align-items: flex-start; flex-direction: column; padding: 14px; }
+      main { width: calc(100vw - 18px); padding-top: 10px; }
+      .metrics { grid-template-columns: 1fr; }
+      .move { font-size: 32px; }
+      h2 { font-size: 23px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="mark">CP</div>
+        <div>
+          <h1>Chess Psych Demo Console</h1>
+          <p class="subhead">Engine eval plus player psychology, shown through two world championship positions.</p>
+        </div>
+      </div>
+      <div class="status"><span class="dot"></span><span>Offline demo ready</span></div>
+    </header>
+
+    <main>
+      <section class="panel left">
+        <div class="tabs" role="tablist" aria-label="Demo case">
+          <button class="tab active" data-case="tal" type="button">Tal 1960</button>
+          <button class="tab" data-case="carlsen" type="button">Carlsen 2013</button>
+        </div>
+        <div class="case-title">
+          <div class="eyebrow" id="caseEra"></div>
+          <h2 id="caseName"></h2>
+          <div class="move-line"><span class="move" id="caseMove"></span><span id="caseMoveText"></span></div>
+        </div>
+        <div class="board-wrap">
+          <div class="board" id="board" aria-label="Chess position before the critical move"></div>
+        </div>
+      </section>
+
+      <section class="right">
+        <div class="hero-strip">
+          <article class="panel read">
+            <div class="label">Engine-only read</div>
+            <strong id="engineHeadline"></strong>
+            <p id="engineCopy"></p>
+          </article>
+          <article class="panel read psych">
+            <div class="label">Chess Psych read</div>
+            <strong id="psychHeadline"></strong>
+            <p id="psychCopy"></p>
+            <div class="tags" id="tags"></div>
+          </article>
+        </div>
+
+        <div class="metrics">
+          <div class="panel metric">
+            <div class="num" id="depthCount"></div>
+            <div class="cap">Stockfish depths tested</div>
+          </div>
+          <div class="panel metric">
+            <div class="num" id="dislikeCount"></div>
+            <div class="cap">engine probes say the move got worse</div>
+          </div>
+          <div class="panel metric">
+            <div class="num" id="contextScore"></div>
+            <div class="cap">player-context signal</div>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <article class="panel section">
+            <h3>Engine Probe Trace</h3>
+            <div class="chart" id="chart"></div>
+          </article>
+          <article class="panel section">
+            <h3>90-Second Talk Cues</h3>
+            <div class="script" id="script"></div>
+          </article>
+        </div>
+      </section>
+
+      <div class="bottom-note">
+        <span>Source data: demos/generated/cross_era_genius_demo.json</span>
+        <span>One-liner: Stockfish sees the board. Chess Psych sees the player.</span>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const cases = {
+      tal: {
+        era: "1960 World Championship - Game 6",
+        name: "Botvinnik vs Tal",
+        move: "21...Nf4",
+        moveText: "a knight sacrifice for initiative",
+        fen: "2r3k1/pp4bp/3p2p1/3Ppb1n/1qr5/2N1B1PP/PP2QPBK/R1R5 b - - 1 21",
+        from: "h5",
+        to: "f4",
+        engineHeadline: "Every tested depth dislikes Tal's sacrifice.",
+        engineCopy: "Stockfish's depth-limited snapshots see Black giving material and worsening the centipawn number.",
+        psychHeadline: "The move fits Tal's attacking identity.",
+        psychCopy: "Chess Psych flags initiative, forcing pressure, and player style: a practical problem Botvinnik had to solve at the board.",
+        contextScore: "High",
+        tags: ["initiative", "sacrifice", "forcing lines", "attacking identity"],
+        cues: [
+          ["0:10", "Tal is not random data. This is a real world championship game."],
+          ["0:25", "The engine number says the sacrifice is suspicious at every tested depth."],
+          ["0:42", "The human story is different: Tal created pressure that won the game."]
+        ],
+        probes: [
+          { depth: 1, before: 99, after: 153, delta: -54 },
+          { depth: 2, before: 109, after: 153, delta: -44 },
+          { depth: 3, before: 101, after: 175, delta: -74 },
+          { depth: 4, before: 82, after: 204, delta: -122 },
+          { depth: 5, before: 97, after: 194, delta: -97 },
+          { depth: 6, before: 96, after: 171, delta: -75 },
+          { depth: 7, before: 83, after: 173, delta: -90 },
+          { depth: 8, before: 108, after: 164, delta: -56 },
+          { depth: 10, before: 99, after: 148, delta: -49 },
+          { depth: 12, before: 102, after: 133, delta: -31 },
+          { depth: 14, before: 107, after: 163, delta: -56 }
+        ]
+      },
+      carlsen: {
+        era: "2013 World Championship - Game 3",
+        name: "Carlsen vs Anand",
+        move: "28.e3",
+        moveText: "a pawn concession to reactivate pieces",
+        fen: "1r1r4/4qpk1/4b1p1/1pp1b1Np/3p3P/3P2P1/1P2PPB1/R3R1KQ w - - 0 28",
+        from: "e2",
+        to: "e3",
+        engineHeadline: "The engine-only view dislikes the resource.",
+        engineCopy: "Across the current cached probe set, the move makes Carlsen's mover-side evaluation worse at every tested depth.",
+        psychHeadline: "The context explains why the move matters.",
+        psychCopy: "This is modern Carlsen: temporary material concession, piece reactivation, and survival under title-match pressure.",
+        contextScore: "High",
+        tags: ["reactivation", "resilience", "match pressure", "temporary pawn sacrifice"],
+        cues: [
+          ["1:00", "Jump forward more than fifty years: now it is Carlsen-Anand."],
+          ["1:10", "This is not Tal chaos. It is a quiet modern resource."],
+          ["1:22", "Same product thesis: engine numbers need player context."]
+        ],
+        probes: [
+          { depth: 1, before: -31, after: -61, delta: -30 },
+          { depth: 2, before: -21, after: -65, delta: -44 },
+          { depth: 3, before: -10, after: -65, delta: -55 },
+          { depth: 4, before: -12, after: -68, delta: -56 },
+          { depth: 5, before: -11, after: -33, delta: -22 },
+          { depth: 6, before: -7, after: -30, delta: -23 },
+          { depth: 7, before: 1, after: -45, delta: -46 },
+          { depth: 8, before: -13, after: -79, delta: -66 },
+          { depth: 10, before: -26, after: -93, delta: -67 },
+          { depth: 12, before: -46, after: -68, delta: -22 },
+          { depth: 14, before: -63, after: -75, delta: -12 }
+        ]
+      }
+    };
+
+    const pieceMap = {
+      p: "&#9823;", r: "&#9820;", n: "&#9822;", b: "&#9821;", q: "&#9819;", k: "&#9818;",
+      P: "&#9817;", R: "&#9814;", N: "&#9816;", B: "&#9815;", Q: "&#9813;", K: "&#9812;"
+    };
+
+    function squareName(fileIndex, rankIndex) {
+      return "abcdefgh"[fileIndex] + String(8 - rankIndex);
+    }
+
+    function renderBoard(data) {
+      const board = document.getElementById("board");
+      board.innerHTML = "";
+      const ranks = data.fen.split(" ")[0].split("/");
+      ranks.forEach((rank, rankIndex) => {
+        let fileIndex = 0;
+        for (const token of rank) {
+          if (Number.isInteger(Number(token))) {
+            for (let i = 0; i < Number(token); i += 1) {
+              const sq = squareName(fileIndex, rankIndex);
+              board.appendChild(square("", sq, fileIndex, rankIndex, data));
+              fileIndex += 1;
+            }
+            continue;
+          }
+          const sq = squareName(fileIndex, rankIndex);
+          board.appendChild(square(token, sq, fileIndex, rankIndex, data));
+          fileIndex += 1;
+        }
+        while (fileIndex < 8) {
+          const sq = squareName(fileIndex, rankIndex);
+          board.appendChild(square("", sq, fileIndex, rankIndex, data));
+          fileIndex += 1;
+        }
+      });
+    }
+
+    function square(piece, name, fileIndex, rankIndex, data) {
+      const div = document.createElement("div");
+      const shade = (fileIndex + rankIndex) % 2 === 0 ? "light" : "dark";
+      div.className = "square " + shade;
+      if (name === data.from) div.classList.add("from");
+      if (name === data.to) div.classList.add("target");
+      div.innerHTML = (pieceMap[piece] || "") + "<span class=\"coord\">" + name + "</span>";
+      return div;
+    }
+
+    function renderChart(data) {
+      const chart = document.getElementById("chart");
+      chart.innerHTML = "";
+      const max = Math.max(...data.probes.map(p => Math.abs(p.delta)));
+      data.probes.forEach((probe) => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
+        const width = Math.max(5, Math.round(Math.abs(probe.delta) / max * 100));
+        const barClass = probe.delta < 0 ? "bar" : "bar good";
+        row.innerHTML = `
+          <span>D${probe.depth}</span>
+          <span class="track"><span class="${barClass}" style="width:${width}%"></span></span>
+          <span class="delta">${probe.delta > 0 ? "+" : ""}${probe.delta} cp</span>
+        `;
+        chart.appendChild(row);
+      });
+    }
+
+    function renderScript(data) {
+      const script = document.getElementById("script");
+      script.innerHTML = "";
+      data.cues.forEach(([time, text]) => {
+        const cue = document.createElement("div");
+        cue.className = "cue";
+        cue.innerHTML = "<b>" + time + "</b><span>" + text + "</span>";
+        script.appendChild(cue);
+      });
+    }
+
+    function renderTags(data) {
+      const tags = document.getElementById("tags");
+      tags.innerHTML = "";
+      data.tags.forEach((tag) => {
+        const pill = document.createElement("span");
+        pill.className = "tag";
+        pill.textContent = tag;
+        tags.appendChild(pill);
+      });
+    }
+
+    function renderCase(key) {
+      const data = cases[key];
+      document.getElementById("caseEra").textContent = data.era;
+      document.getElementById("caseName").textContent = data.name;
+      document.getElementById("caseMove").textContent = data.move;
+      document.getElementById("caseMoveText").textContent = data.moveText;
+      document.getElementById("engineHeadline").textContent = data.engineHeadline;
+      document.getElementById("engineCopy").textContent = data.engineCopy;
+      document.getElementById("psychHeadline").textContent = data.psychHeadline;
+      document.getElementById("psychCopy").textContent = data.psychCopy;
+      document.getElementById("depthCount").textContent = data.probes.length;
+      document.getElementById("dislikeCount").textContent = data.probes.filter(p => p.delta < 0).length + "/" + data.probes.length;
+      document.getElementById("contextScore").textContent = data.contextScore;
+      renderBoard(data);
+      renderChart(data);
+      renderScript(data);
+      renderTags(data);
+      document.querySelectorAll(".tab").forEach((button) => {
+        button.classList.toggle("active", button.dataset.case === key);
+      });
+    }
+
+    document.querySelectorAll(".tab").forEach((button) => {
+      button.addEventListener("click", () => renderCase(button.dataset.case));
+    });
+
+    renderCase("tal");
+  </script>
+</body>
+</html>

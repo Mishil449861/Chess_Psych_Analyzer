@@ -1,0 +1,298 @@
+{
+  "generated_at_utc": "2026-07-08T17:11:53+00:00",
+  "thesis": "Stockfish sees the board. Chess Psych sees the player.",
+  "cases": {
+    "tal_1960": {
+      "game": {
+        "event": "World Championship Match",
+        "site": "Moscow URS",
+        "date": "1960.03.26",
+        "round": "6",
+        "white": "Mikhail Botvinnik",
+        "black": "Mikhail Tal",
+        "result": "0-1",
+        "eco": "E69",
+        "opening": "King's Indian Defence, Fianchetto Variation",
+        "official_context": "FIDE World Championship title match, Moscow 1960",
+        "source_urls": [
+          "https://en.wikipedia.org/wiki/World_Chess_Championship_1960",
+          "https://fr.wikipedia.org/wiki/Championnat_du_monde_d%27%C3%A9checs_1960",
+          "https://www.theguardian.com/sport/2024/nov/24/greatest-chess-games-world-championship-history"
+        ]
+      },
+      "score_validation": {
+        "final_fen": "8/3R3p/6p1/8/3k1P2/2p3KP/8/4r3 b - - 3 47",
+        "final_side_to_move": "black",
+        "final_position_in_check": true,
+        "fen_before": "2r3k1/pp4bp/3p2p1/3Ppb1n/1qr5/2N1B1PP/PP2QPBK/R1R5 b - - 1 21",
+        "fen_after": "2r3k1/pp4bp/3p2p1/3Ppb2/1qr2n2/2N1B1PP/PP2QPBK/R1R5 w - - 2 22",
+        "tal_move_uci": "h5f4",
+        "tal_move_san": "Nf4",
+        "accepted_line_fen": "2r3k1/pp4bp/3p2p1/3P1b2/2r5/2N2p1P/Pq1BQPBK/1RR5 w - - 0 25",
+        "accepted_line_san": "gxf4 exf4 Bd2 Qxb2 Rab1 f3"
+      },
+      "engine_probes": [
+        {
+          "depth": 1,
+          "eval_before_cp_white_pov": 99,
+          "eval_after_cp_white_pov": 153,
+          "engine_change_cp_white_pov": 54,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 2,
+          "eval_before_cp_white_pov": 109,
+          "eval_after_cp_white_pov": 153,
+          "engine_change_cp_white_pov": 44,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 3,
+          "eval_before_cp_white_pov": 101,
+          "eval_after_cp_white_pov": 175,
+          "engine_change_cp_white_pov": 74,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 4,
+          "eval_before_cp_white_pov": 82,
+          "eval_after_cp_white_pov": 204,
+          "engine_change_cp_white_pov": 122,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 5,
+          "eval_before_cp_white_pov": 97,
+          "eval_after_cp_white_pov": 194,
+          "engine_change_cp_white_pov": 97,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 6,
+          "eval_before_cp_white_pov": 96,
+          "eval_after_cp_white_pov": 171,
+          "engine_change_cp_white_pov": 75,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 7,
+          "eval_before_cp_white_pov": 83,
+          "eval_after_cp_white_pov": 173,
+          "engine_change_cp_white_pov": 90,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 8,
+          "eval_before_cp_white_pov": 108,
+          "eval_after_cp_white_pov": 164,
+          "engine_change_cp_white_pov": 56,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 10,
+          "eval_before_cp_white_pov": 99,
+          "eval_after_cp_white_pov": 148,
+          "engine_change_cp_white_pov": 49,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 12,
+          "eval_before_cp_white_pov": 102,
+          "eval_after_cp_white_pov": 133,
+          "engine_change_cp_white_pov": 31,
+          "engine_read_for_tal": "dislikes Tal's move"
+        },
+        {
+          "depth": 14,
+          "eval_before_cp_white_pov": 107,
+          "eval_after_cp_white_pov": 163,
+          "engine_change_cp_white_pov": 56,
+          "engine_read_for_tal": "dislikes Tal's move"
+        }
+      ],
+      "chess_psych_read": {
+        "headline": "Tal-style initiative sacrifice",
+        "product_verdict": "human-genius",
+        "why_engine_misses_the_story": "The engine probe treats 21...Nf4 as worsening Black at every tested depth, but the move creates a forcing attacking problem that Botvinnik failed to solve over the board.",
+        "why_chess_psych_flags_it_positive": "The move is a knight sacrifice by a known attacking player in a world championship game. It gives material for initiative, opens forcing lines, and matches Tal's historical identity: practical pressure over static material.",
+        "tested_depths_disliking_tal_move": 11,
+        "tested_depth_count": 11,
+        "features": {
+          "san": "Nf4",
+          "piece": "knight",
+          "is_capture": false,
+          "is_check": false,
+          "from_square": "h5",
+          "to_square": "f4",
+          "phase": "middlegame",
+          "eco": "E69",
+          "time_spent": 0.0,
+          "eval_before": 107,
+          "eval_after": 163,
+          "eval_drop_cp": 56,
+          "hanging_before": 1,
+          "hanging_after": 2,
+          "hanging_increase": 1,
+          "king_attackers_before": 0,
+          "king_attackers_after": 0,
+          "king_attackers_increase": 0,
+          "material_delta": 0,
+          "time_class": "classical"
+        },
+        "pattern_tags": [
+          "sacrifice-for-initiative",
+          "forcing-complications",
+          "king-pressure",
+          "tal-attacking-signature"
+        ]
+      }
+    },
+    "carlsen_2013": {
+      "game": {
+        "event": "World Championship Match",
+        "site": "Chennai IND",
+        "date": "2013.11.12",
+        "round": "3",
+        "white": "Magnus Carlsen",
+        "black": "Viswanathan Anand",
+        "result": "1/2-1/2",
+        "eco": "A07",
+        "opening": "Reti Opening",
+        "official_context": "FIDE World Championship title match, Chennai 2013",
+        "source_urls": [
+          "https://en.wikipedia.org/wiki/World_Chess_Championship_2013",
+          "https://it.wikipedia.org/wiki/Campionato_del_mondo_di_scacchi_2013",
+          "https://fr.wikipedia.org/wiki/Championnat_du_monde_d%27%C3%A9checs_2013"
+        ]
+      },
+      "score_validation": {
+        "final_fen": "8/6k1/8/4K3/2B5/6b1/8/8 w - - 0 52",
+        "fen_before": "1r1r4/4qpk1/4b1p1/1pp1b1Np/3p3P/3P2P1/1P2PPB1/R3R1KQ w - - 0 28",
+        "fen_after": "1r1r4/4qpk1/4b1p1/1pp1b1Np/3p3P/3PP1P1/1P3PB1/R3R1KQ b - - 0 28",
+        "critical_ply": 55,
+        "move_san": "e3",
+        "move_uci": "e2e3",
+        "final_side_to_move": "white"
+      },
+      "engine_probes": [
+        {
+          "depth": 1,
+          "eval_before_cp_white_pov": -31,
+          "eval_after_cp_white_pov": -61,
+          "mover_change_cp": -30,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 2,
+          "eval_before_cp_white_pov": -21,
+          "eval_after_cp_white_pov": -65,
+          "mover_change_cp": -44,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 3,
+          "eval_before_cp_white_pov": -10,
+          "eval_after_cp_white_pov": -65,
+          "mover_change_cp": -55,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 4,
+          "eval_before_cp_white_pov": -12,
+          "eval_after_cp_white_pov": -68,
+          "mover_change_cp": -56,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 5,
+          "eval_before_cp_white_pov": -11,
+          "eval_after_cp_white_pov": -33,
+          "mover_change_cp": -22,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 6,
+          "eval_before_cp_white_pov": -7,
+          "eval_after_cp_white_pov": -30,
+          "mover_change_cp": -23,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 7,
+          "eval_before_cp_white_pov": 1,
+          "eval_after_cp_white_pov": -45,
+          "mover_change_cp": -46,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 8,
+          "eval_before_cp_white_pov": -13,
+          "eval_after_cp_white_pov": -79,
+          "mover_change_cp": -66,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 10,
+          "eval_before_cp_white_pov": -26,
+          "eval_after_cp_white_pov": -93,
+          "mover_change_cp": -67,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 12,
+          "eval_before_cp_white_pov": -46,
+          "eval_after_cp_white_pov": -68,
+          "mover_change_cp": -22,
+          "engine_read": "dislikes the move"
+        },
+        {
+          "depth": 14,
+          "eval_before_cp_white_pov": -63,
+          "eval_after_cp_white_pov": -75,
+          "mover_change_cp": -12,
+          "engine_read": "dislikes the move"
+        }
+      ],
+      "engine_read_summary": {
+        "likes": 0,
+        "dislikes": 11,
+        "neutral": 0,
+        "total": 11
+      },
+      "chess_psych_read": {
+        "headline": "Carlsen reactivation pawn sacrifice",
+        "product_verdict": "modern-human-resource",
+        "why_engine_number_is_not_enough": "Most tested Stockfish depths dislike 28.e3, because the move gives up a pawn while Carlsen is already under pressure. The match story is different: the sacrifice opens the position and reactivates his pieces.",
+        "why_chess_psych_flags_it_positive": "This is not a Tal-style attack. It is a modern Carlsen resource: temporary material concession, piece reactivation, and survival under World Championship pressure.",
+        "features": {
+          "san": "e3",
+          "piece": "pawn",
+          "is_capture": false,
+          "is_check": false,
+          "from_square": "e2",
+          "to_square": "e3",
+          "phase": "middlegame",
+          "eco": "A07",
+          "time_spent": 0.0,
+          "eval_before": -63,
+          "eval_after": -75,
+          "eval_drop_cp": 12,
+          "hanging_before": 0,
+          "hanging_after": 0,
+          "hanging_increase": 0,
+          "king_attackers_before": 0,
+          "king_attackers_after": 0,
+          "king_attackers_increase": 0,
+          "material_delta": 0,
+          "time_class": "classical"
+        },
+        "pattern_tags": [
+          "temporary-pawn-sacrifice",
+          "piece-reactivation",
+          "match-pressure-resource",
+          "carlsen-resilience-signature"
+        ]
+      }
+    }
+  }
+}

@@ -18,15 +18,19 @@ RUN apt-get update \
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src \
     STOCKFISH_PATH=/usr/games/stockfish \
     CHESS_PSYCH_DB=/data/chess_psych.db
 
 WORKDIR /app
-COPY *.py ./
+COPY src ./src
+COPY scripts ./scripts
 COPY tests ./tests
+COPY apps ./apps
+COPY web_components ./web_components
 
 # Mount a volume here in production to persist the DB
 VOLUME ["/data"]
 
-ENTRYPOINT ["python", "cli.py"]
+ENTRYPOINT ["python", "-m", "chess_psych.cli"]
 CMD ["--help"]

@@ -1,10 +1,52 @@
-/.venv
-*.gguf
-/venv
-/__pycache__
-/stockfish
-/ChessEngine
-*.bin
-*.safetensors
-custom_chess/
+# Bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Project data
 chess_psych.db
+*.db
+*.sqlite
+*.sqlite3
+data/
+.chess_psych/
+
+# Env
+.env
+.env.local
+
+# Logs
+*.log
+
+# Large local files
+models/*.gguf
+vendor/**/*.exe
+
+# Generated demo scratch files
+demos/generated/*
+!demos/generated/cross_era_genius_demo.html
+!demos/generated/cross_era_genius_demo.json
