@@ -59,8 +59,8 @@ def detect_blunders(
                       m.game_id, m.ply, m.san, m.uci,
                       m.fen_before, m.fen_after,
                       m.eval_before, m.eval_after,
-                      m.time_spent, m.side,
-                      g.user_color, g.eco, g.user_rating, g.time_class
+                      m.time_spent, m.clock_remaining, m.side,
+                      g.user_color, g.eco, g.user_rating, g.time_class, g.time_control
                FROM moves m
                JOIN games g ON m.game_id = g.id
                WHERE g.user_id = ?
@@ -97,6 +97,8 @@ def detect_blunders(
                     eval_after=r["eval_after"],
                     side=r["side"],
                     eco=r["eco"],
+                    clock_remaining=r["clock_remaining"],
+                    time_control=r["time_control"],
                 )
                 # Time class is a Chess.com-native concept worth carrying
                 # through to features for downstream clustering.

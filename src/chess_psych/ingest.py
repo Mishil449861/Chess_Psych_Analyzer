@@ -23,6 +23,7 @@ import requests
 from .config import config
 from .chesscom_client import ChessComClient, PlayerNotFound
 from .db import get_conn, get_or_create_user, init_db
+from .features import parse_time_control
 from .stockfish_pool import StockfishPool
 
 log = logging.getLogger(__name__)
@@ -168,6 +169,7 @@ def ingest_pgn(
     ply = 0
     last_eval_white = 0
     prev_clk = {"white": None, "black": None}
+    initial_seconds, increment_seconds = parse_time_control(headers.get("TimeControl"))
 
     while node.variations:
         next_node = node.variation(0)
@@ -197,9 +199,15 @@ def ingest_pgn(
                 eval_after_white = None
 
         time_spent: Optional[float] = None
-        if clk_remaining is not None and prev_clk[side] is not None:
-            ts = prev_clk[side] - clk_remaining
-            if ts >= 0:
+        if clk_remaining is not None:
+            previous_clock = prev_clk[side]
+            if previous_clock is None:
+                previous_clock = initial_seconds
+            if previous_clock is not None:
+                ts = previous_clock + increment_seconds - clk_remaining
+            else:
+                ts = None
+            if ts is not None and ts >= 0:
                 time_spent = ts
         if clk_remaining is not None:
             prev_clk[side] = clk_remaining
@@ -207,10 +215,10 @@ def ingest_pgn(
         conn.execute(
             """INSERT INTO moves
                  (game_id, ply, san, uci, fen_before, fen_after,
-                  eval_before, eval_after, time_spent, side)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                  eval_before, eval_after, time_spent, clock_remaining, side)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (game_id, ply, san, uci, fen_before, fen_after,
-             last_eval_white, eval_after_white, time_spent, side),
+             last_eval_white, eval_after_white, time_spent, clk_remaining, side),
         )
 
         if eval_after_white is not None:

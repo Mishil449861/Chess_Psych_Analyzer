@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS moves (
     eval_before INTEGER,
     eval_after  INTEGER,
     time_spent  REAL,
+    clock_remaining REAL,
     side        TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_moves_game ON moves(game_id);
@@ -102,6 +103,11 @@ def init_db(db_path: Optional[Path] = None) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(path) as conn:
         conn.executescript(SCHEMA)
+        # Existing local databases predate clock_remaining. SQLite cannot add
+        # it through CREATE TABLE IF NOT EXISTS, so migrate in place.
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(moves)")}
+        if "clock_remaining" not in columns:
+            conn.execute("ALTER TABLE moves ADD COLUMN clock_remaining REAL")
     log.debug("DB initialized at %s", path)
     return path
 

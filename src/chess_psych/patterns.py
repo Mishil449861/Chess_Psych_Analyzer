@@ -32,6 +32,7 @@ PHASES = ["opening", "middlegame", "endgame"]
 PIECES = ["pawn", "knight", "bishop", "rook", "queen", "king"]
 ECO_LETTERS = ["A", "B", "C", "D", "E"]
 TIME_CLASSES = ["bullet", "blitz", "rapid", "daily"]
+TIME_CONTEXTS = ["critical", "low", "quick", "available", "unknown"]
 
 
 def features_to_vector(feat: Dict[str, Any]) -> np.ndarray:
@@ -49,6 +50,9 @@ def features_to_vector(feat: Dict[str, Any]) -> np.ndarray:
 
     tc = (feat.get("time_class") or "").lower()
     v.extend(1.0 if tc == t else 0.0 for t in TIME_CLASSES)
+
+    time_context = (feat.get("time_context") or "unknown").lower()
+    v.extend(1.0 if time_context == t else 0.0 for t in TIME_CONTEXTS)
 
     v.append(1.0 if feat.get("is_capture") else 0.0)
     v.append(1.0 if feat.get("is_check") else 0.0)

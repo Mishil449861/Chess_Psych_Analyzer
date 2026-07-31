@@ -16,12 +16,16 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from chess_psych.blunders import blunder_threshold
+from chess_psych.coaching_experiments import basic_chess_label, non_leaky_features
 from chess_psych.features import (
-    extract_move_features, hanging_pieces, king_zone_attackers,
+    clock_context, extract_move_features, hanging_pieces, king_zone_attackers,
     material_balance, phase_of,
+    parse_time_control,
 )
 from chess_psych.ingest import parse_clock_comment, parse_eval_comment
+from chess_psych.ollama_labels import label_cluster
 from chess_psych.patterns import features_to_vector, summarize_cluster
+from chess_psych.personal_validation import MODEL_FIELDS
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +123,63 @@ class TestExtractMoveFeatures:
             side="black",
         )
         assert feats["eval_drop_cp"] == 200
+
+
+class TestClockContext:
+    def test_parses_base_and_increment(self):
+        assert parse_time_control("300+2") == (300, 2)
+        assert parse_time_control("30") == (30, 0)
+        assert parse_time_control("1/86400") == (None, 0)
+
+    def test_marks_clock_scramble_and_rushed_move_separately(self):
+        assert clock_context(4.0, 300, 1.0) == "critical"
+        assert clock_context(90.0, 300, 1.4) == "quick"
+        assert clock_context(90.0, 300, 8.0) == "available"
+
+
+class TestBasicChessTaxonomy:
+    def test_rule_order_matches_coaching_priority(self):
+        assert basic_chess_label({"ignored_recapture": True, "hanging_increase": 2}) == "Delayed recapture"
+        assert basic_chess_label({"hanging_increase": 1}) == "Leaves a piece loose"
+        assert basic_chess_label({"king_attackers_increase": 2}) == "King safety"
+        assert basic_chess_label({"material_delta": -3}) == "Material oversight"
+        assert basic_chess_label({"best_move_is_capture": True, "is_capture": False}) == "Missed tactical capture"
+        assert basic_chess_label({}) == "Other"
+
+    def test_non_leaky_features_exclude_rule_defining_fields(self):
+        class Observation:
+            features = {
+                "phase": "middlegame",
+                "ignored_recapture": True,
+                "hanging_increase": 1,
+                "king_attackers_increase": 2,
+                "material_delta": -3,
+            }
+
+        features = non_leaky_features(Observation())
+        assert features["phase"] == "middlegame"
+        assert "ignored_recapture" not in features
+        assert "hanging_increase" not in features
+        assert "king_attackers_increase" not in features
+        assert "material_delta" not in features
+
+
+class TestClusterTrustGuards:
+    def test_clustering_excludes_rule_defining_fields(self):
+        for field in (
+            "ignored_recapture", "hanging_increase", "king_attackers_increase",
+            "material_delta", "best_move_is_capture",
+        ):
+            assert field not in MODEL_FIELDS
+
+    def test_local_labeler_abstains_before_calling_ollama_for_weak_cluster(self):
+        result = label_cluster({
+            "cluster_id": 3,
+            "training_occurrences": 3,
+            "label_evidence": {"rule_label_counts": {"Other confirmed error": 3}},
+        })
+        assert result["provider"] == "ollama"
+        assert result["label"]["abstain"] is True
 
 
 # ---------------------------------------------------------------------------

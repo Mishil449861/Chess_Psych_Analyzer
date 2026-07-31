@@ -7,8 +7,10 @@ did it leave pieces hanging, did it expose the king, etc.
 These features feed both the database (stored as JSON per blunder) and
 the clustering step in patterns.py.
 """
+import re
+
 import chess
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Tuple
 
 PIECE_VALUES = {
     chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3,
@@ -18,6 +20,43 @@ PIECE_NAMES = {
     chess.PAWN: "pawn", chess.KNIGHT: "knight", chess.BISHOP: "bishop",
     chess.ROOK: "rook", chess.QUEEN: "queen", chess.KING: "king",
 }
+
+
+def parse_time_control(time_control: Optional[str]) -> Tuple[Optional[int], int]:
+    """Return the initial seconds and Fischer increment from a Chess.com control.
+
+    Examples: ``"30"`` becomes ``(30, 0)`` and ``"300+2"`` becomes
+    ``(300, 2)``. Unsupported controls deliberately return ``(None, 0)`` so
+    callers do not pretend a daily or correspondence clock is comparable.
+    """
+    if not time_control:
+        return None, 0
+    match = re.fullmatch(r"(\d+)(?:\+(\d+))?", time_control.strip())
+    if not match:
+        return None, 0
+    return int(match.group(1)), int(match.group(2) or 0)
+
+
+def clock_context(
+    clock_remaining: Optional[float],
+    initial_seconds: Optional[int],
+    time_spent: Optional[float],
+) -> str:
+    """Classify a move's clock situation without calling every fast move a blunder.
+
+    ``critical`` and ``low`` depend on the game's original clock. ``quick``
+    means the player moved within two seconds while they still had time; it is
+    a coaching clue, not evidence that time itself caused the error.
+    """
+    if clock_remaining is None or initial_seconds is None or initial_seconds <= 0:
+        return "unknown"
+    if clock_remaining <= max(2.0, initial_seconds * 0.03):
+        return "critical"
+    if clock_remaining <= max(5.0, initial_seconds * 0.10):
+        return "low"
+    if time_spent is not None and time_spent <= 2.0:
+        return "quick"
+    return "available"
 
 
 def phase_of(board: chess.Board) -> str:
@@ -89,6 +128,8 @@ def extract_move_features(
     eval_after: int = 0,
     side: str = "white",
     eco: str = None,
+    clock_remaining: float = None,
+    time_control: str = None,
 ) -> Dict[str, Any]:
     """Build the feature dict for one move."""
     board_before = chess.Board(fen_before)
@@ -121,6 +162,10 @@ def extract_move_features(
     else:
         eval_drop_cp = eval_after - eval_before
 
+    initial_seconds, _ = parse_time_control(time_control)
+    clock_value = float(clock_remaining) if clock_remaining is not None else None
+    spent_value = float(time_spent) if time_spent is not None else None
+
     return {
         "san": san,
         "piece": piece_name,
@@ -130,7 +175,13 @@ def extract_move_features(
         "to_square": chess.square_name(move.to_square),
         "phase": phase_of(board_before),
         "eco": eco or "",
-        "time_spent": float(time_spent) if time_spent is not None else 0.0,
+        "time_spent": spent_value if spent_value is not None else 0.0,
+        "clock_remaining_seconds": clock_value,
+        "clock_fraction_remaining": (
+            round(clock_value / initial_seconds, 4)
+            if clock_value is not None and initial_seconds else None
+        ),
+        "time_context": clock_context(clock_value, initial_seconds, spent_value),
         "eval_before": int(eval_before) if eval_before is not None else 0,
         "eval_after": int(eval_after) if eval_after is not None else 0,
         "eval_drop_cp": int(eval_drop_cp),

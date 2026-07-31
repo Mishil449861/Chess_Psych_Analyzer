@@ -6,6 +6,17 @@ Most chess training tools give you stats. Chess Psych finds the recurring shapes
 
 ## Quick Start
 
+### Easiest Windows Route
+
+1. On GitHub, click `Code`, then `Download ZIP`.
+2. Extract the ZIP and open the `use_chess_psych` folder.
+3. Double-click `RUN_MY_ANALYSIS.bat`.
+4. Enter a public Chess.com username. The first run creates a local virtual environment, installs dependencies, runs Stockfish analysis, and opens a private local report.
+
+Your personal result is written to `demos/my_results/` and is ignored by Git.
+
+### Command Line Route
+
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
@@ -27,32 +38,26 @@ $env:PYTHONPATH = "src"
 python -m chess_psych.cli analyze YourChessComName --max-games 50
 ```
 
-Optional: run a local Ollama server with `llama3` to get LLM-polished pattern names and a personalized profile paragraph. The system works without it and falls back to mechanical descriptions.
+Optional: run local Ollama with `qwen2.5:7b-instruct` (or another compatible local model) to draft pattern wording. The clustering and evidence checks work without it and fall back to mechanical descriptions.
 
 ## What It Does
 
 1. Ingests recent games from the Chess.com public API.
 2. Evaluates each position with Stockfish, or uses inline PGN evals when present.
 3. Detects blunders with a rating-calibrated threshold.
-4. Extracts features per blunder: piece, capture/check, hanging pieces, king exposure, phase, time class, and time spent.
+4. Extracts features per blunder: piece, capture/check, hanging pieces, king exposure, phase, time class, time spent, clock remaining, and clock context.
 5. Clusters blunders with HDBSCAN to find recurring patterns.
 6. Summarizes each pattern in plain language.
 
-## UI Demo
+## Use It Yourself
 
-For the polished 90-second product demo, open this file directly in a browser:
+The [use_chess_psych](use_chess_psych) folder is the handoff point for people using the repository from GitHub:
 
-```text
-demos/ui_demo.html
-```
+- `RUN_MY_ANALYSIS.bat`: double-click route for a Windows user who only knows a public Chess.com username.
+- `START_HERE.md`: plain-English walkthrough.
+- `TECHNICAL.md`: reproducible command line, data-science method, and result boundaries.
 
-That is the main show file. It is a static, offline UI built from the verified Tal/Carlsen engine probe data, so it does not need Streamlit, Stockfish, or a dev server during the presentation.
-
-To refresh the underlying cross-era data when your machine has enough memory for Stockfish:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/test_local.ps1 -CrossEraDemo
-```
+The app uses public Chess.com games only. Personal reports, downloaded games, and presentation assets stay local under `demos/` and are excluded from Git.
 
 ## Live Coaching Demo
 
@@ -70,18 +75,11 @@ For a deterministic presentation UI:
 streamlit run apps/presentation_demo.py
 ```
 
-## Demo Data Builders
+## Data And Validation
 
-The UI demo uses the Tal/Carlsen cross-era artifact:
+The pipeline uses Stockfish to flag rating-relative errors, HDBSCAN to group non-leaky board and clock features, and a chronological holdout for later-game checks. Local Ollama may draft wording, but deterministic evidence gates control which labels are shown.
 
-```bash
-python tests/test_cross_era_genius_demo.py
-```
-
-That writes:
-
-- `demos/generated/cross_era_genius_demo.html`
-- `demos/generated/cross_era_genius_demo.json`
+For a plain-English product post and screenshot plan, see [docs/linkedin_post.md](docs/linkedin_post.md).
 
 ## Repository Layout
 
@@ -101,8 +99,7 @@ src/chess_psych/              Python package
 apps/                         Streamlit apps
 scripts/                      Local utility and smoke-test scripts
 tests/                        Unit tests and opt-in demo data builders
-demos/ui_demo.html            Main static UI demo
-demos/generated/              Generated demo source data
+demos/                         Local-only reports and presentation assets
 web_components/               Streamlit chessboard component
 vendor/                       Stockfish source and binaries
 models/                       Local LLM model files
@@ -153,6 +150,6 @@ The unit tests cover pure functions and the Chess.com client using stubbed reque
 - Inline evals are used first when PGNs include them.
 - Blunder thresholds scale by rating.
 - HDBSCAN avoids forcing every blunder into a pattern.
-- Time class is preserved as a first-class feature.
+- Time class, clock remaining, and increment-aware time spent are preserved as first-class features.
 - Re-ingestion and reclustering are idempotent.
 - LLM summaries are optional.
