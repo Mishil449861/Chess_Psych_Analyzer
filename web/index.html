@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Private, browser-based chess mistake pattern analysis." />
+    <title>Chess Psych</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="app-header">
+        <div class="brand-mark" aria-hidden="true">CP</div>
+        <div>
+          <p class="eyebrow">Private chess analysis</p>
+          <h1>Chess Psych</h1>
+        </div>
+        <p class="privacy-note">Runs on this device</p>
+      </header>
+
+      <section class="run-panel" aria-labelledby="run-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Start an analysis</p>
+            <h2 id="run-title">Find one pattern worth practicing.</h2>
+          </div>
+          <span class="run-spec">Stockfish 18 · local only</span>
+        </div>
+
+        <form id="analysis-form" class="analysis-form">
+          <label for="username">Chess.com username</label>
+          <div class="input-row">
+            <input id="username" name="username" autocomplete="username" placeholder="Your username" required />
+            <select id="sample-size" aria-label="Analysis size">
+              <option value="12">Quick 12</option>
+              <option value="40">Full 40</option>
+            </select>
+            <button id="analyze-button" type="submit">Analyze</button>
+          </div>
+          <div class="form-footer">
+            <p><strong>Quick 12</strong> is a signal check. <strong>Full 40</strong> can verify or withhold a personal claim.</p>
+            <label class="file-control" for="pgn-file">
+              <input id="pgn-file" type="file" accept=".pgn,text/plain" />
+              Or use a PGN file
+            </label>
+          </div>
+        </form>
+        <div id="progress" class="progress" aria-live="polite" hidden>
+          <div class="progress-track"><span id="progress-bar"></span></div>
+          <p id="progress-copy">Preparing local engine…</p>
+        </div>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+      </section>
+
+      <section id="empty-state" class="empty-state">
+        <h2>One useful habit, backed by games.</h2>
+        <p>Chess Psych checks a real move with Stockfish, looks for the same board trigger in older and later games, and stays quiet when the evidence is weak.</p>
+      </section>
+
+      <section id="report" class="report" hidden aria-live="polite"></section>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

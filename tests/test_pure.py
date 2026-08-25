@@ -25,7 +25,13 @@ from chess_psych.features import (
 from chess_psych.ingest import parse_clock_comment, parse_eval_comment
 from chess_psych.ollama_labels import label_cluster
 from chess_psych.patterns import features_to_vector, summarize_cluster
-from chess_psych.personal_validation import MODEL_FIELDS
+from chess_psych.personal_validation import (
+    MODEL_FIELDS,
+    ErrorObservation,
+    adaptive_risk_patterns,
+    decision_context_from_cluster,
+    extract_error_features,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -131,6 +137,12 @@ class TestClockContext:
         assert parse_time_control("30") == (30, 0)
         assert parse_time_control("1/86400") == (None, 0)
 
+    def test_personal_pattern_can_keep_an_entire_time_class(self):
+        from scripts.build_personal_pattern_demo import parse_allowed_time_controls
+
+        assert parse_allowed_time_controls("180,300") == ("180", "300")
+        assert parse_allowed_time_controls("any") is None
+
     def test_marks_clock_scramble_and_rushed_move_separately(self):
         assert clock_context(4.0, 300, 1.0) == "critical"
         assert clock_context(90.0, 300, 1.4) == "quick"
@@ -163,6 +175,34 @@ class TestBasicChessTaxonomy:
         assert "king_attackers_increase" not in features
         assert "material_delta" not in features
 
+    def test_newly_capturable_piece_has_a_concrete_error_label(self):
+        before = chess.Board("4k3/6b1/8/8/8/1Q6/8/4K3 w - - 0 1")
+        played = chess.Move.from_uci("b3c3")
+        best_move = chess.Move.from_uci("b3d3")
+        before.push(played)
+        reply = chess.Move.from_uci("g7c3")
+        features = extract_error_features(
+            chess.Board("4k3/6b1/8/8/8/1Q6/8/4K3 w - - 0 1"),
+            before,
+            played,
+            best_move,
+            previous_move=None,
+            previous_was_capture=False,
+            eval_drop_cp=250,
+            time_class="blitz",
+            opponent_best_reply=reply,
+        )
+        assert features["opens_new_capture"] is True
+        assert features["opponent_reply_capture_piece"] == "queen"
+        assert features["opponent_reply_piece"] == "bishop"
+        assert features["opponent_reply_captures_moved_piece"] is True
+        assert features["moved_piece_started_safe"] is True
+        assert features["moved_piece_moved_into_attack"] is True
+        assert features["moved_piece_unprotected_after"] is True
+        assert features["moved_piece_attackers_after"] == 1
+        assert features["moved_piece_defenders_after"] == 0
+        assert features["error_family"] == "Allows a new capture"
+
 
 class TestClusterTrustGuards:
     def test_clustering_excludes_rule_defining_fields(self):
@@ -180,6 +220,115 @@ class TestClusterTrustGuards:
         })
         assert result["provider"] == "ollama"
         assert result["label"]["abstain"] is True
+
+    def test_local_labeler_abstains_for_a_generic_context_cluster(self):
+        result = label_cluster({
+            "cluster_id": 4,
+            "training_occurrences": 8,
+            "label_evidence": {
+                "members": 8,
+                "rule_label_counts": {"Other confirmed error": 8},
+                "phase_counts": {"middlegame": 8},
+                "piece_counts": {"pawn": 8},
+                "time_context_counts": {"available": 8},
+            },
+        })
+        assert result["label"]["abstain"] is True
+        assert result["evidence_label"] == "Unclear chess cause"
+
+    def test_decision_context_uses_the_concrete_capture_mechanism(self):
+        context = decision_context_from_cluster({
+            "name": "Allows a new capture",
+            "label_evidence": {
+                "phase_counts": {"middlegame": 5},
+                "piece_counts": {"bishop": 5},
+                "time_context_counts": {"available": 5},
+            },
+        })
+        assert context["kind"] == "practice cue"
+        assert "bishop" in context["title"]
+        assert "destination square" in context["action"]
+
+    def test_mixed_low_clock_cluster_becomes_a_watchpoint_not_a_flaw(self):
+        context = decision_context_from_cluster({
+            "name": "Other confirmed error",
+            "label_evidence": {
+                "phase_counts": {"endgame": 5},
+                "piece_counts": {"queen": 5},
+                "time_context_counts": {"quick": 3, "available": 2},
+                "median_clock_remaining_seconds": 40.0,
+            },
+        })
+        assert context["kind"] == "watchpoint"
+
+    def test_risk_profile_uses_all_decisions_as_its_baseline(self):
+        def observation(game_url, ply, played_at):
+            return ErrorObservation(
+                game_url=game_url,
+                played_at=played_at,
+                time_class="blitz",
+                user_color="white",
+                user_rating=1500,
+                opponent="opponent",
+                ply=ply,
+                move_number=ply // 2,
+                san="Re1",
+                uci="e2e1",
+                fen_before=chess.STARTING_FEN,
+                fen_after=chess.STARTING_FEN,
+                eval_before_cp=0,
+                eval_after_cp=-250,
+                eval_drop_cp=250,
+                threshold_cp=180,
+                best_move_san="d4",
+                best_move_uci="d2d4",
+                features={
+                    "error_family": "Allows a new capture",
+                    "phase": "middlegame",
+                    "piece": "rook",
+                    "time_context": "low",
+                },
+            )
+
+        cutoff = "2026-01-10T00:00:00+00:00"
+        decisions = []
+        errors = []
+        for index in range(8):
+            row = {
+                "game_url": "older",
+                "played_at": "2026-01-01T00:00:00+00:00",
+                "ply": index + 1,
+                "features": {
+                    "phase": "middlegame",
+                    "piece": "rook" if index < 3 else "pawn",
+                    "time_context": "low" if index < 3 else "available",
+                },
+            }
+            decisions.append(row)
+            if index < 3:
+                errors.append(observation("older", index + 1, row["played_at"]))
+        for index in range(4):
+            row = {
+                "game_url": "newer",
+                "played_at": "2026-01-20T00:00:00+00:00",
+                "ply": index + 1,
+                "features": {
+                    "phase": "middlegame",
+                    "piece": "rook" if index < 2 else "pawn",
+                    "time_context": "low" if index < 2 else "available",
+                },
+            }
+            decisions.append(row)
+            if index < 2:
+                errors.append(observation("newer", index + 1, row["played_at"]))
+
+        patterns = adaptive_risk_patterns(errors, decisions, cutoff=cutoff)
+
+        assert len(patterns) == 1
+        assert patterns[0]["conditions"] == {"piece": "rook", "time_context": "low"}
+        assert patterns[0]["training_lift"] > 1
+        assert patterns[0]["holdout_lift"] > 1
+        assert "Low-clock queen endgame" in context["title"]
 
 
 # ---------------------------------------------------------------------------

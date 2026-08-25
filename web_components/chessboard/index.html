@@ -18,6 +18,7 @@ let board = null;
 let game = null;
 let lastPositionId = -1;
 let lastOrientation = null;
+let lastMovableColor = null;
 
 function send(value) {
   window.parent.postMessage({
@@ -40,7 +41,7 @@ function ready() {
   }, "*");
 }
 
-function build(fen, orientation) {
+function build(fen, orientation, movableColor) {
   game = new Chess(fen);
   board = Chessboard('board', {
     draggable: true,
@@ -50,8 +51,8 @@ function build(fen, orientation) {
     onDragStart: function(source, piece) {
       if (game.game_over()) return false;
       // Don't allow dragging the opponent's pieces
-      if ((orientation === 'white' && piece.search(/^b/) !== -1) ||
-          (orientation === 'black' && piece.search(/^w/) !== -1)) {
+      if ((movableColor === 'white' && piece.search(/^b/) !== -1) ||
+          (movableColor === 'black' && piece.search(/^w/) !== -1)) {
         return false;
       }
     },
@@ -68,12 +69,14 @@ window.addEventListener("message", function(e) {
   const args = e.data.args;
   const fen = args.fen;
   const orientation = args.orientation;
+  const movableColor = args.movable_color || orientation;
   const positionId = args.position_id;
 
-  if (board === null || orientation !== lastOrientation) {
+  if (board === null || orientation !== lastOrientation || movableColor !== lastMovableColor) {
     lastOrientation = orientation;
+    lastMovableColor = movableColor;
     if (board !== null) board.destroy();
-    build(fen, orientation);
+    build(fen, orientation, movableColor);
   } else if (positionId !== lastPositionId) {
     game.load(fen);
     board.position(fen);

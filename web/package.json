@@ -1,0 +1,19 @@
+{
+  "name": "chess-psych-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/copy-engine.mjs && vite",
+    "build": "node scripts/copy-engine.mjs && vite build",
+    "preview": "vite preview",
+    "test": "node scripts/test-analysis.mjs"
+  },
+  "dependencies": {
+    "chess.js": "1.4.0",
+    "stockfish": "18.0.8"
+  },
+  "devDependencies": {
+    "vite": "8.2.2"
+  }
+}

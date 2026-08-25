@@ -11,12 +11,18 @@
 
 1. Double-click `RUN_MY_ANALYSIS.bat`.
 2. Enter a public Chess.com username when asked.
-3. Wait for the analysis to finish. The first run can take a while because Stockfish checks positions.
-4. Your browser opens a personal report automatically.
+3. Choose Blitz (recommended), Bullet, Rapid, or a custom exact time control.
+4. Wait for the analysis to finish. The first run can take a while because Stockfish checks positions.
+5. Your browser opens a personal report automatically.
 
-The launcher uses only public Chess.com games, keeps exact three- and five-minute blitz games, and saves your result under `demos/my_results/`.
+The recommended option keeps exact three- and five-minute blitz games. Bullet and Rapid use the player's recent rated games in that format; the custom option keeps one exact control. Results are saved under `demos/my_results/`.
 
-Requirements: Windows, Python 3.11 or newer, and an internet connection. On a first run, the launcher creates `venv` and installs the dependencies in `requirements.txt`.
+## Requirements
+
+- **Windows** and an internet connection.
+- **Python 3.11 or newer.** The launcher creates `venv` and installs Python dependencies on its first run.
+- **Stockfish.** It is required to identify chess errors and is not downloaded automatically. Follow [INSTALL_STOCKFISH.md](INSTALL_STOCKFISH.md) once.
+- **No local AI model is required.** Ollama/Qwen is optional; the guided personal report uses deterministic labels and works without it.
 
 ## Technical route
 

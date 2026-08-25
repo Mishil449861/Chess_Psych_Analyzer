@@ -26,10 +26,11 @@ import chess
 import chess.pgn
 
 from chess_psych.chesscom_client import ArchivedGame, ChessComClient
-from chess_psych.features import parse_time_control
+from chess_psych.features import PIECE_NAMES, clock_context, parse_time_control, phase_of
 from chess_psych.ingest import parse_clock_comment
 from chess_psych.personal_validation import (
     ErrorObservation,
+    adaptive_risk_patterns,
     error_threshold,
     extract_error_features,
     user_eval_drop,
@@ -39,7 +40,9 @@ from chess_psych.ollama_labels import label_clusters
 from chess_psych.stockfish_pool import StockfishPool
 
 
-ANALYSIS_SCHEMA_VERSION = 3
+# Increment when the per-error feature packet changes. Cached Stockfish work
+# must not be reused when a report needs newer explanatory fields.
+ANALYSIS_SCHEMA_VERSION = 9
 
 
 def _read_json(path: Path, default):
@@ -65,16 +68,26 @@ def _game_to_dict(game: ArchivedGame) -> Dict[str, Any]:
     return asdict(game)
 
 
-def parse_allowed_time_controls(raw: str) -> tuple[str, ...]:
+def parse_allowed_time_controls(raw: str) -> Optional[tuple[str, ...]]:
+    """Parse exact controls, or accept ``any`` for one whole time class."""
+    if raw.strip().lower() in {"any", "all", "auto"}:
+        return None
     controls = tuple(sorted({item.strip() for item in raw.split(",") if item.strip()}))
     if not controls or any(not control.replace("+", "").isdigit() for control in controls):
         raise ValueError("--allowed-time-controls must be a comma-separated list such as 180,300")
     return controls
 
 
-def fetch_games(username: str, max_games: int, time_class: str, cache: Path) -> List[Dict[str, Any]]:
+def fetch_games(
+    username: str,
+    max_games: int,
+    time_class: str,
+    cache: Path,
+    *,
+    refresh: bool = False,
+) -> List[Dict[str, Any]]:
     cached = _read_json(cache, [])
-    if len(cached) >= max_games:
+    if not refresh and len(cached) >= max_games:
         return cached[:max_games]
     print(f"Fetching {max_games} public {time_class} games for {username}...")
     with ChessComClient() as client:
@@ -87,6 +100,18 @@ def fetch_games(username: str, max_games: int, time_class: str, cache: Path) -> 
     payload = [_game_to_dict(g) for g in games]
     _write_json(cache, payload)
     return payload
+
+
+def checkpoint_meta(args: argparse.Namespace, allowed_controls: Optional[tuple[str, ...]]) -> Dict[str, Any]:
+    """Describe every setting that changes stored Stockfish observations."""
+    return {
+        "schema_version": ANALYSIS_SCHEMA_VERSION,
+        "username": args.username.lower(),
+        "time_class": args.time_class,
+        "allowed_time_controls": list(allowed_controls or ()),
+        "screen_depth": args.screen_depth,
+        "confirm_depth": args.confirm_depth,
+    }
 
 
 def _played_at(game: Dict[str, Any]) -> str:
@@ -176,10 +201,17 @@ def analyze_game(
                 candidates = engine.analyse_with_pv(board_before, depth=confirm_depth, multipv=2)
                 if candidates:
                     before_confirm = candidates[0]["eval_cp"]
-                    after_confirm = engine.analyse(board_after, depth=confirm_depth)
+                    reply_candidates = engine.analyse_with_pv(
+                        board_after, depth=confirm_depth, multipv=1,
+                    )
+                    after_confirm = (
+                        reply_candidates[0]["eval_cp"]
+                        if reply_candidates else engine.analyse(board_after, depth=confirm_depth)
+                    )
                     confirmed_drop = user_eval_drop(before_confirm, after_confirm, user_color)
                     if confirmed_drop >= threshold:
                         best_move = candidates[0]["move"]
+                        opponent_best_reply = reply_candidates[0]["move"] if reply_candidates else None
                         features = extract_error_features(
                             board_before,
                             board_after,
@@ -187,6 +219,7 @@ def analyze_game(
                             best_move,
                             previous_move=previous_move,
                             previous_was_capture=previous_was_capture,
+                            opponent_best_reply=opponent_best_reply,
                             eval_drop_cp=confirmed_drop,
                             time_class=game_data.get("time_class", ""),
                             clock_remaining=clock_remaining,
@@ -213,6 +246,13 @@ def analyze_game(
                             best_move_san=board_before.san(best_move),
                             best_move_uci=best_move.uci(),
                             features=features,
+                            opponent_best_reply_san=(
+                                board_after.san(opponent_best_reply)
+                                if opponent_best_reply else None
+                            ),
+                            opponent_best_reply_uci=(
+                                opponent_best_reply.uci() if opponent_best_reply else None
+                            ),
                             clock_remaining_seconds=clock_remaining,
                             time_spent_seconds=time_spent,
                             initial_seconds=initial_seconds,
@@ -223,27 +263,113 @@ def analyze_game(
     return observations
 
 
+def extract_decision_contexts(game_data: Dict[str, Any], username: str) -> List[Dict[str, Any]]:
+    """Replay all of one player's decisions without invoking the engine.
+
+    Error counts alone cannot show whether a context is unusually risky for a
+    player. These rows provide the denominator for that comparison.
+    """
+    game = chess.pgn.read_game(io.StringIO(game_data["pgn"]))
+    if game is None:
+        return []
+    username_lc = username.lower()
+    if game.headers.get("White", "").lower() == username_lc:
+        user_color = chess.WHITE
+    elif game.headers.get("Black", "").lower() == username_lc:
+        user_color = chess.BLACK
+    else:
+        return []
+
+    board = game.board()
+    if board.uci_variant != "chess":
+        return []
+    initial_seconds, increment_seconds = parse_time_control(
+        game.headers.get("TimeControl") or game_data.get("time_control")
+    )
+    previous_clock: Dict[chess.Color, Optional[float]] = {
+        chess.WHITE: None,
+        chess.BLACK: None,
+    }
+    decisions: List[Dict[str, Any]] = []
+    node = game
+    ply = 0
+    while node.variations:
+        next_node = node.variation(0)
+        move = next_node.move
+        ply += 1
+        board_before = board.copy(stack=False)
+        side = board_before.turn
+        clock_remaining = parse_clock_comment(next_node.comment)
+        time_spent: Optional[float] = None
+        if clock_remaining is not None:
+            prior_clock = previous_clock[side]
+            if prior_clock is None:
+                prior_clock = initial_seconds
+            if prior_clock is not None:
+                elapsed = prior_clock + increment_seconds - clock_remaining
+                if elapsed >= -0.2:
+                    time_spent = max(0.0, elapsed)
+            previous_clock[side] = clock_remaining
+
+        if side == user_color and ply >= 6:
+            piece = board_before.piece_at(move.from_square)
+            decisions.append({
+                "game_url": game_data.get("url", ""),
+                "played_at": _played_at(game_data),
+                "ply": ply,
+                "features": {
+                    "phase": phase_of(board_before),
+                    "piece": PIECE_NAMES.get(piece.piece_type, "unknown") if piece else "unknown",
+                    "time_context": clock_context(clock_remaining, initial_seconds, time_spent),
+                },
+            })
+        board.push(move)
+        node = next_node
+    return decisions
+
+
 def build(args: argparse.Namespace) -> Dict[str, Any]:
     generated = ROOT / "demos" / "generated"
     slug = args.username.lower()
     allowed_controls = parse_allowed_time_controls(args.allowed_time_controls)
-    controls_slug = "_".join(control.replace("+", "p") for control in allowed_controls)
+    controls_slug = "all" if allowed_controls is None else "_".join(
+        control.replace("+", "p") for control in allowed_controls
+    )
     game_cache = generated / f"{slug}_{args.time_class}_{controls_slug}_{args.max_games}_games.json"
     checkpoint = generated / f"{slug}_{args.time_class}_{controls_slug}_analysis.json"
     output = Path(args.output) if args.output else ROOT / "demos" / "personal_pattern_evidence.json"
 
-    games = fetch_games(args.username, args.max_games, args.time_class, game_cache)
-    games = [
-        game for game in games
-        if str(game.get("time_control", "")) in allowed_controls
-    ]
+    games = fetch_games(
+        args.username,
+        args.max_games,
+        args.time_class,
+        game_cache,
+        refresh=args.refresh_games,
+    )
+    if allowed_controls is not None:
+        games = [
+            game for game in games
+            if str(game.get("time_control", "")) in allowed_controls
+        ]
     if not games:
+        available_controls = sorted({
+            str(game.get("time_control", "")) for game in fetch_games(
+                args.username, args.max_games, args.time_class, game_cache,
+                refresh=False,
+            ) if game.get("time_control")
+        })
+        available_note = (
+            f" Available recent controls: {', '.join(available_controls)}."
+            if available_controls else ""
+        )
         raise ValueError(
-            f"No {args.time_class} games found with controls {', '.join(allowed_controls)}."
+            f"No {args.time_class} games found with the selected controls."
+            f" Choose a different format or use 'any' controls.{available_note}"
         )
     games = sorted(games, key=lambda g: g.get("end_time") or 0)
     existing = _read_json(checkpoint, {"games": {}, "meta": {}})
-    if existing.get("meta", {}).get("schema_version") != ANALYSIS_SCHEMA_VERSION:
+    run_meta = checkpoint_meta(args, allowed_controls)
+    if existing.get("meta") != run_meta:
         completed: Dict[str, List[Dict[str, Any]]] = {}
     else:
         completed = existing.get("games", {})
@@ -259,12 +385,7 @@ def build(args: argparse.Namespace) -> Dict[str, Any]:
             completed[key] = [o.to_dict() for o in observations]
             _write_json(checkpoint, {
                 "meta": {
-                    "schema_version": ANALYSIS_SCHEMA_VERSION,
-                    "username": args.username,
-                    "time_class": args.time_class,
-                    "allowed_time_controls": allowed_controls,
-                    "screen_depth": args.screen_depth,
-                    "confirm_depth": args.confirm_depth,
+                    **run_meta,
                 },
                 "games": completed,
             })
@@ -290,12 +411,26 @@ def build(args: argparse.Namespace) -> Dict[str, Any]:
         min_cluster_size=args.min_cluster_size,
         focus_rule_label=args.focus_rule_label,
     )
+    validation["game_split"] = {
+        "earlier_games": sum(1 for game in games if _played_at(game) < cutoff),
+        "later_games": sum(1 for game in games if _played_at(game) >= cutoff),
+    }
+    decisions = [
+        decision
+        for game in games
+        for decision in extract_decision_contexts(game, args.username)
+    ]
+    validation["adaptive_risk_patterns"] = adaptive_risk_patterns(
+        observations,
+        decisions,
+        cutoff=cutoff,
+    )
     result = {
         "experiment": {
             "username": args.username,
             "source": "Chess.com public API",
             "time_class": args.time_class,
-            "allowed_time_controls": list(allowed_controls),
+            "allowed_time_controls": list(allowed_controls or ()),
             "games": len(games),
             "training_fraction": args.train_fraction,
             "screen_depth": args.screen_depth,
@@ -325,11 +460,11 @@ def build(args: argparse.Namespace) -> Dict[str, Any]:
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("username")
-    p.add_argument("--time-class", default="bullet", choices=["bullet", "blitz", "rapid"])
+    p.add_argument("--time-class", default="blitz", choices=["bullet", "blitz", "rapid"])
     p.add_argument(
         "--allowed-time-controls",
         default="180,300",
-        help="Comma-separated exact Chess.com controls to keep. Defaults to 3- and 5-minute blitz.",
+        help="Comma-separated exact Chess.com controls, or 'any' for all controls in one time class. Defaults to 3- and 5-minute blitz.",
     )
     p.add_argument("--max-games", type=int, default=160)
     p.add_argument("--train-fraction", type=float, default=0.75)
@@ -351,6 +486,11 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--ollama-model", default="qwen2.5:7b-instruct")
     p.add_argument("--max-cluster-labels", type=int, default=3)
     p.add_argument("--skip-ai-labels", action="store_true")
+    p.add_argument(
+        "--refresh-games",
+        action="store_true",
+        help="Fetch the latest public archive data before reusing any local game cache.",
+    )
     p.add_argument("--output")
     return p
 

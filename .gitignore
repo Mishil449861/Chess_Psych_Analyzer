@@ -48,3 +48,12 @@ vendor/**/*.exe
 
 # Local demos, presentation data, and personal reports
 demos/
+
+# Local presentation notes and drafts
+docs/
+
+# Browser-app package cache
+.npm-cache/
+web/node_modules/
+web/dist/
+web/public/engine/

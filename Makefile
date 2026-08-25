@@ -1,7 +1,7 @@
 PYTHON ?= python
 export PYTHONPATH := src
 
-.PHONY: install test smoke demo-ui demo-build-ui demo-refresh demo-real demo-tal demo-cross-era experiment-models app presentation docker clean help
+.PHONY: install test smoke demo-ui demo-build-ui demo-refresh demo-real demo-tal demo-cross-era experiment-models app presentation presentation-data docker clean help
 
 help:
 	@echo "Targets:"
@@ -17,6 +17,7 @@ help:
 	@echo "  experiment-models Run cached coaching-model experiments"
 	@echo "  app       Run the live-coach Streamlit app"
 	@echo "  presentation Run the presentation-mode Streamlit app"
+	@echo "  presentation-data Precompute the three presentation profiles with the real model"
 	@echo "  docker    Build the Docker image"
 	@echo "  clean     Remove caches and the local DB"
 
@@ -60,6 +61,9 @@ app:
 
 presentation:
 	streamlit run apps/presentation_demo.py
+
+presentation-data:
+	$(PYTHON) scripts/precompute_presentation_profiles.py
 
 docker:
 	docker build -t chess-psych .

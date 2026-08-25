@@ -2,20 +2,34 @@
 
 A personal blunder-pattern coach for Chess.com players.
 
-Most chess training tools give you stats. Chess Psych finds the recurring shapes of your mistakes, clusters them into patterns, and explains them in plain language.
+Most chess training tools give you stats. Chess Psych finds repeatable, Stockfish-confirmed mistake triggers in your own games and explains them in plain language.
 
-## Quick Start
+## Before You Run
 
-### Easiest Windows Route
+You need:
+
+- Python `3.11+` from [python.org](https://www.python.org/downloads/), with **Add Python to PATH** enabled during installation.
+- Stockfish for your operating system. It performs the chess evaluation; see [Stockfish setup](use_chess_psych/INSTALL_STOCKFISH.md).
+- An internet connection for public Chess.com games.
+- Around 2 GB of free disk space and a laptop/desktop that can keep running while Stockfish analyzes games. A 120-game deep run is deliberately slower than a casual game review.
+
+You do **not** need an OpenAI key, a paid Chess.com account, Ollama, Qwen, Docker, or a GPU. Ollama is optional wording assistance only; it never decides whether a cluster is valid.
+
+## Easiest Windows Route
 
 1. On GitHub, click `Code`, then `Download ZIP`.
 2. Extract the ZIP and open the `use_chess_psych` folder.
 3. Double-click `RUN_MY_ANALYSIS.bat`.
-4. Enter a public Chess.com username. The first run creates a local virtual environment, installs dependencies, runs Stockfish analysis, and opens a private local report.
+4. Enter a public Chess.com username and choose Blitz, Bullet, Rapid, or a custom exact control. Blitz uses a focused 3/5-minute preset; the other two use the player's recent rated games in that format. The guided run defaults to 120 games, performs deeper local Stockfish checks, runs HDBSCAN on the older confirmed errors, and opens a private interactive report.
 
 Your personal result is written to `demos/my_results/` and is ignored by Git.
 
-### Command Line Route
+The guided run refreshes public games, screens with Stockfish at depth 8,
+confirms candidates at depth 14, and opens a local HTML report. The report is
+private to the computer running it. Its HDBSCAN explorer includes both clusters
+and noise; a visible cluster is not automatically a coaching claim.
+
+## Command Line Route
 
 ```bash
 # 1. Install dependencies
@@ -40,14 +54,39 @@ python -m chess_psych.cli analyze YourChessComName --max-games 50
 
 Optional: run local Ollama with `qwen2.5:7b-instruct` (or another compatible local model) to draft pattern wording. The clustering and evidence checks work without it and fall back to mechanical descriptions.
 
+## Run The Presentation Demo
+
+This is the accurate, local presentation path. It precomputes three public
+profiles using the same real model, then gives you one live Stockfish re-check
+on stage. The HDBSCAN analysis is intentionally marked as precomputed.
+
+```powershell
+.\venv\Scripts\Activate.ps1
+$env:PYTHONPATH = "src"
+python scripts\precompute_presentation_profiles.py
+.\venv\Scripts\python.exe -m streamlit run .\apps\presentation_demo.py
+```
+
+Open the URL Streamlit prints, usually `http://localhost:8501`. The first
+command can take a while because it performs three 120-game engine runs. The
+second starts the minimalist presentation UI.
+
+## Troubleshooting
+
+- **`Stockfish is required` or engine will not start:** confirm `STOCKFISH_PATH` points to the actual `.exe`, then reopen PowerShell. Use the official setup guide above.
+- **`No blitz games found with controls 180,300`:** choose Bullet, Rapid, or Custom in the launcher. A player may simply not have public 3/5-minute games.
+- **The first run stops during installation:** run `RUN_MY_ANALYSIS.bat` again after confirming Python and internet access. The launcher safely resumes the local setup.
+- **Analysis takes a long time:** this is expected for local engine analysis. Keep the window open; completed games are checkpointed under `demos/generated/`, and a rerun resumes compatible work.
+- **No cluster or no coaching claim:** that is a valid result. The model is designed to leave ambiguous errors as noise and withhold unsupported advice.
+
 ## What It Does
 
 1. Ingests recent games from the Chess.com public API.
 2. Evaluates each position with Stockfish, or uses inline PGN evals when present.
 3. Detects blunders with a rating-calibrated threshold.
 4. Extracts features per blunder: piece, capture/check, hanging pieces, king exposure, phase, time class, time spent, clock remaining, and clock context.
-5. Clusters blunders with HDBSCAN to find recurring patterns.
-6. Summarizes each pattern in plain language.
+5. Uses HDBSCAN to explore similar board and clock contexts without forcing every error into a group.
+6. Shows a coaching trigger only when the exact engine-checked cause and a concrete context recur in a later chronological holdout.
 
 ## Use It Yourself
 
@@ -72,14 +111,23 @@ In the sidebar, enter the username you analyzed. The coach loads that player's r
 For a deterministic presentation UI:
 
 ```bash
-streamlit run apps/presentation_demo.py
+python -m streamlit run apps/presentation_demo.py
 ```
+
+For the presentation UI, first run `python scripts/precompute_presentation_profiles.py` as shown above.
 
 ## Data And Validation
 
-The pipeline uses Stockfish to flag rating-relative errors, HDBSCAN to group non-leaky board and clock features, and a chronological holdout for later-game checks. Local Ollama may draft wording, but deterministic evidence gates control which labels are shown.
+The pipeline uses Stockfish to flag rating-relative errors, HDBSCAN to explore non-leaky board and clock contexts, and a chronological holdout for later-game checks. HDBSCAN never creates the coaching claim. A player-facing trigger needs a concrete chess cause, a repeated board/clock situation in both time periods, and enough earlier and later examples to support it. Broad labels such as "pawn moves" are withheld. Local Ollama may draft wording, but deterministic evidence gates control which labels are shown.
 
-For a plain-English product post and screenshot plan, see [docs/linkedin_post.md](docs/linkedin_post.md).
+## Browser App
+
+The `web/` app is a lightweight public, no-server preview. It runs Stockfish
+WebAssembly on the visitor's device and keeps results in their browser. For the
+real HDBSCAN model, chronological validation, and interactive cluster explorer,
+use `RUN_MY_ANALYSIS.bat` / `RUN_MY_ANALYSIS.ps1`. For web preview use and
+Cloudflare Pages deployment, see [web/README.md](web/README.md).
+
 
 ## Repository Layout
 

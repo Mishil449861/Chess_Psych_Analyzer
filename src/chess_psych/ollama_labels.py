@@ -11,6 +11,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import requests
 
+from .personal_validation import LABELABLE_ERROR_FAMILIES, MIN_LABEL_PURITY
+
 
 PROMPT_VERSION = "cluster-label-v1"
 DEFAULT_MODEL = "qwen2.5:7b-instruct"
@@ -25,8 +27,8 @@ the majority; call it time pressure only when low or critical is the majority.
 Use rule_label_counts literally as well. Only use 'tactical', 'forcing', or
 'missed capture' language when Missed tactical capture is the majority. Only
 use 'loose' or 'hanging' language when Leaves a piece loose is the majority.
-When Other confirmed error is the majority, say 'decision errors' and give a
-neutral candidate-move check instead of inventing a chess cause.
+When Other confirmed error is the majority, abstain. Do not turn a broad move
+context into a chess mistake label.
 Return JSON only with exactly these fields:
 label (max 72 characters), coaching_cue (max 140 characters),
 alternative_explanation (max 140 characters), confidence (low|medium|high),
@@ -102,6 +104,8 @@ def evidence_label(evidence: Dict[str, Any]) -> str:
     piece = majority(evidence.get("piece_counts", {}))
     clock = majority(evidence.get("time_context_counts", {}))
     rule = majority(evidence.get("rule_label_counts", {}))
+    if rule not in LABELABLE_ERROR_FAMILIES:
+        return "Unclear chess cause"
     parts = []
     if clock == "quick":
         parts.append("Quick")
@@ -115,7 +119,9 @@ def evidence_label(evidence: Dict[str, Any]) -> str:
         "Delayed recapture": "delayed recaptures",
         "King safety": "king-safety errors",
         "Material oversight": "material oversights",
-        "Other confirmed error": "decision errors",
+        "Missed checking move": "missed checking moves",
+        "Allows a new capture": "new captures allowed",
+        "Allows a new check": "new checks allowed",
     }
     parts.append(suffixes.get(rule, "confirmed errors"))
     return " ".join(parts)
@@ -132,9 +138,14 @@ def label_cluster(
     evidence = cluster.get("label_evidence", {})
     support = int(cluster.get("training_occurrences", 0))
     rule_counts = evidence.get("rule_label_counts", {})
+    peak_rule = max(rule_counts, key=rule_counts.get, default="")
     peak_rule_share = max(rule_counts.values(), default=0) / support if support else 0.0
-    if support < 4 or peak_rule_share < 0.6:
-        result = _fallback("The deterministic support or rule-consistency gate did not pass.")
+    if (
+        support < 4
+        or peak_rule not in LABELABLE_ERROR_FAMILIES
+        or peak_rule_share < MIN_LABEL_PURITY
+    ):
+        result = _fallback("No specific chess cause met the deterministic label-consistency gate.")
     else:
         packet = {
             "cluster_support": support,
