@@ -54,23 +54,6 @@ python -m chess_psych.cli analyze YourChessComName --max-games 50
 
 Optional: run local Ollama with `qwen2.5:7b-instruct` (or another compatible local model) to draft pattern wording. The clustering and evidence checks work without it and fall back to mechanical descriptions.
 
-## Run The Presentation Demo
-
-This is the accurate, local presentation path. It precomputes three public
-profiles using the same real model, then gives you one live Stockfish re-check
-on stage. The HDBSCAN analysis is intentionally marked as precomputed.
-
-```powershell
-.\venv\Scripts\Activate.ps1
-$env:PYTHONPATH = "src"
-python scripts\precompute_presentation_profiles.py
-.\venv\Scripts\python.exe -m streamlit run .\apps\presentation_demo.py
-```
-
-Open the URL Streamlit prints, usually `http://localhost:8501`. The first
-command can take a while because it performs three 120-game engine runs. The
-second starts the minimalist presentation UI.
-
 ## Troubleshooting
 
 - **`Stockfish is required` or engine will not start:** confirm `STOCKFISH_PATH` points to the actual `.exe`, then reopen PowerShell. Use the official setup guide above.
@@ -107,14 +90,6 @@ streamlit run apps/live_coach_app.py
 ```
 
 In the sidebar, enter the username you analyzed. The coach loads that player's recurring patterns, watches every move, and flags live moves that resemble known weaknesses.
-
-For a deterministic presentation UI:
-
-```bash
-python -m streamlit run apps/presentation_demo.py
-```
-
-For the presentation UI, first run `python scripts/precompute_presentation_profiles.py` as shown above.
 
 ## Data And Validation
 

@@ -48,6 +48,8 @@ vendor/**/*.exe
 
 # Local demos, presentation data, and personal reports
 demos/
+apps/presentation_demo.py
+scripts/precompute_presentation_profiles.py
 
 # Local presentation notes and drafts
 docs/

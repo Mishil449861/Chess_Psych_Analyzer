@@ -85,11 +85,12 @@ def fetch_games(
     cache: Path,
     *,
     refresh: bool = False,
+    display_name: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     cached = _read_json(cache, [])
     if not refresh and len(cached) >= max_games:
         return cached[:max_games]
-    print(f"Fetching {max_games} public {time_class} games for {username}...")
+    print(f"Fetching {max_games} public {time_class} games for {display_name or username}...")
     with ChessComClient() as client:
         games = list(client.iter_games(
             username,
@@ -345,6 +346,7 @@ def build(args: argparse.Namespace) -> Dict[str, Any]:
         args.time_class,
         game_cache,
         refresh=args.refresh_games,
+        display_name=args.display_name,
     )
     if allowed_controls is not None:
         games = [
@@ -355,7 +357,7 @@ def build(args: argparse.Namespace) -> Dict[str, Any]:
         available_controls = sorted({
             str(game.get("time_control", "")) for game in fetch_games(
                 args.username, args.max_games, args.time_class, game_cache,
-                refresh=False,
+                refresh=False, display_name=args.display_name,
             ) if game.get("time_control")
         })
         available_note = (
@@ -460,6 +462,10 @@ def build(args: argparse.Namespace) -> Dict[str, Any]:
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("username")
+    p.add_argument(
+        "--display-name",
+        help="Optional terminal-only progress label; does not change the Chess.com username used for fetching.",
+    )
     p.add_argument("--time-class", default="blitz", choices=["bullet", "blitz", "rapid"])
     p.add_argument(
         "--allowed-time-controls",
