@@ -103,30 +103,77 @@ real HDBSCAN model, chronological validation, and interactive cluster explorer,
 use `RUN_MY_ANALYSIS.bat` / `RUN_MY_ANALYSIS.ps1`. For web preview use and
 Cloudflare Pages deployment, see [web/README.md](web/README.md).
 
+## What Is Public
+
+The GitHub repository contains the reusable analyzer and user-facing routes.
+Private reports, downloaded games, local presentation material, historical
+comparison demos, and exploratory experiment outputs stay ignored on the local
+computer. This keeps the repository lightweight and prevents a demo profile
+from becoming part of the public product.
 
 ## Repository Layout
 
 ```text
 src/chess_psych/              Python package
-  cli.py                      CLI entry point
-  ingest.py                   Chess.com primary, Lichess fallback
-  chesscom_client.py          Chess.com API wrapper
-  stockfish_pool.py           Persistent Stockfish engine wrapper
-  db.py                       SQLite schema and helpers
-  blunders.py                 Rating-scaled blunder detection
-  features.py                 Per-move feature engineering
-  patterns.py                 HDBSCAN clustering
-  llm_summary.py              Ollama-backed naming and summaries
-  live_coach.py               Real-time pattern matching
+  __init__.py                 Package metadata
+  cli.py                      Command-line analysis and reporting entry point
+  chesscom_client.py          Rate-aware Chess.com Public Data API client
+  ingest.py                   PGN ingestion and database population
+  stockfish_pool.py           Bounded, reusable local Stockfish process
+  blunders.py                 Rating-calibrated engine error detection
+  features.py                 Chess and clock feature engineering primitives
+  patterns.py                 Database-oriented HDBSCAN pattern clustering
+  personal_validation.py      Chronological validation and adaptive risk analysis
+  ollama_labels.py            Optional local-LLM wording, bounded by evidence
+  llm_summary.py              Optional Ollama summary helper
+  live_coach.py               Matches live decisions to saved player patterns
+  coaching_experiments.py     Shared research utilities for taxonomy experiments
+  config.py                   Environment-variable configuration
+  db.py                       SQLite schema and persistence helpers
 
-apps/                         Streamlit apps
-scripts/                      Local utility and smoke-test scripts
-tests/                        Unit tests and opt-in demo data builders
-demos/                         Local-only reports and presentation assets
-web_components/               Streamlit chessboard component
-vendor/                       Stockfish source and binaries
-models/                       Local LLM model files
-data/                         Local SQLite data, ignored by git
+apps/
+  live_coach_app.py           Streamlit interface for an analyzed player
+
+scripts/
+  build_personal_pattern_demo.py  Main public-game to validated-evidence pipeline
+  build_personal_report.py        Builds the private, file-based HTML report
+  smoke_test.py                   End-to-end synthetic pipeline check
+  test_local.ps1                 Local verification helper
+
+use_chess_psych/
+  RUN_MY_ANALYSIS.bat         Double-click Windows launcher
+  RUN_MY_ANALYSIS.ps1         Guided PowerShell launcher and dependency setup
+  START_HERE.md               Plain-language setup and usage guide
+  INSTALL_STOCKFISH.md        Stockfish installation instructions
+  TECHNICAL.md                Method, validation, and result boundaries
+
+web/
+  index.html                  Browser-preview entry page
+  package.json                Browser preview package and npm commands
+  package-lock.json           Locked browser-preview dependencies
+  src/analysis.js             In-browser feature and advice logic
+  src/engine.js               Stockfish WebAssembly integration
+  src/main.js                 Browser-app interaction flow
+  src/style.css               Browser-app styling
+  scripts/copy-engine.mjs     Copies the local engine asset for development
+  scripts/test-analysis.mjs   Browser-analysis contract test
+  README.md                   Browser preview and deployment instructions
+
+web_components/
+  chessboard/index.html       Reusable interactive chessboard for Streamlit
+  custom_chess/index.html     Custom board component used by the live coach
+
+tests/
+  test_pure.py                Deterministic feature and validation unit tests
+  test_chesscom_client.py     Stubbed Chess.com client tests
+  test_personal_report.py     HTML report contract tests
+
+vendor/stockfish/             Stockfish source for reproducible local builds
+Dockerfile                    Container build definition
+Makefile                      Shortcuts for install, test, smoke, app, and Docker
+requirements.txt              Python runtime and test dependencies
+python-version.txt            Recommended Python version marker
+.gitignore                    Keeps local reports, data, demos, and caches private
 ```
 
 ## Configuration

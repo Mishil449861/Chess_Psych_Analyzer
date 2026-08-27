@@ -50,6 +50,13 @@ vendor/**/*.exe
 demos/
 apps/presentation_demo.py
 scripts/precompute_presentation_profiles.py
+scripts/build_cohort_evidence.py
+scripts/build_demo_ui_content.py
+scripts/build_same_mistake_cohort.py
+scripts/experiment_*.py
+tests/test_cross_era_genius_demo.py
+tests/test_real_player_same_move_demo.py
+tests/test_tal_genius_demo.py
 
 # Local presentation notes and drafts
 docs/

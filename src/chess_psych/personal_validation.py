@@ -579,6 +579,15 @@ def adaptive_risk_patterns(
                 "holdout_lift": round(holdout_lift, 2),
                 "family_purity": round(family_purity, 3),
                 "later_family_agreement": round(later_family_share, 3),
+                # Keep these only while selecting patterns. Different feature
+                # combinations can identify the exact same decisions, which
+                # would otherwise produce redundant player-facing labels.
+                "_training_decision_keys": frozenset(
+                    (row["game_url"], row["ply"]) for row in train_rows
+                ),
+                "_holdout_decision_keys": frozenset(
+                    (row["game_url"], row["ply"]) for row in holdout_rows
+                ),
                 "story": (
                     decision_context_from_cluster(cluster_like)
                     if has_single_mechanism else _pressure_story(conditions)
@@ -595,6 +604,8 @@ def adaptive_risk_patterns(
     candidates.sort(
         key=lambda item: (
             len(item["conditions"]),
+            "time_context" in item["conditions"],
+            "piece" in item["conditions"],
             item["training_lift"] + item["holdout_lift"],
             item["training_errors"] + item["holdout_errors"],
         ),
@@ -603,11 +614,20 @@ def adaptive_risk_patterns(
     selected: List[Dict[str, Any]] = []
     for candidate in candidates:
         if any(
+            candidate["_training_decision_keys"] == chosen["_training_decision_keys"]
+            and candidate["_holdout_decision_keys"] == chosen["_holdout_decision_keys"]
+            for chosen in selected
+        ):
+            continue
+        if any(
             candidate["conditions"].items() <= chosen["conditions"].items()
             for chosen in selected
         ):
             continue
         selected.append(candidate)
+    for candidate in selected:
+        candidate.pop("_training_decision_keys")
+        candidate.pop("_holdout_decision_keys")
     return selected
 
 

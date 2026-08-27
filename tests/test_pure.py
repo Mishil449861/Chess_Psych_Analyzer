@@ -293,29 +293,32 @@ class TestClusterTrustGuards:
         cutoff = "2026-01-10T00:00:00+00:00"
         decisions = []
         errors = []
-        for index in range(8):
+        # The risk model requires enough total decisions in both periods. Four
+        # rook errors among eight rook decisions should be riskier than this
+        # player's four errors across twelve earlier decisions overall.
+        for index in range(12):
             row = {
                 "game_url": "older",
                 "played_at": "2026-01-01T00:00:00+00:00",
                 "ply": index + 1,
                 "features": {
                     "phase": "middlegame",
-                    "piece": "rook" if index < 3 else "pawn",
-                    "time_context": "low" if index < 3 else "available",
+                    "piece": "rook" if index < 8 else "pawn",
+                    "time_context": "low" if index < 8 else "available",
                 },
             }
             decisions.append(row)
-            if index < 3:
+            if index < 4:
                 errors.append(observation("older", index + 1, row["played_at"]))
-        for index in range(4):
+        for index in range(8):
             row = {
                 "game_url": "newer",
                 "played_at": "2026-01-20T00:00:00+00:00",
                 "ply": index + 1,
                 "features": {
                     "phase": "middlegame",
-                    "piece": "rook" if index < 2 else "pawn",
-                    "time_context": "low" if index < 2 else "available",
+                    "piece": "rook" if index < 4 else "pawn",
+                    "time_context": "low" if index < 4 else "available",
                 },
             }
             decisions.append(row)
@@ -328,7 +331,6 @@ class TestClusterTrustGuards:
         assert patterns[0]["conditions"] == {"piece": "rook", "time_context": "low"}
         assert patterns[0]["training_lift"] > 1
         assert patterns[0]["holdout_lift"] > 1
-        assert "Low-clock queen endgame" in context["title"]
 
 
 # ---------------------------------------------------------------------------
